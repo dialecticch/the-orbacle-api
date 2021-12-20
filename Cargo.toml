@@ -1,0 +1,40 @@
+[package]
+name = "NftPricer"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "local"
+path = "src/lib.rs"
+
+[[bin]]
+name = "read"
+path = "bin/read_test.rs"
+
+[[bin]]
+name = "store"
+path = "bin/store_collection.rs"
+
+[[bin]]
+name = "fetch"
+path = "bin/fetch_floor.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+dotenv= "0.15.0"
+anyhow = "1.0"
+log = "0.4"
+serde = "1.0"
+serde_json = "1.0"
+serde-aux = "2.2"
+tokio = {version = "1.14", features = ["macros", "rt-multi-thread"]}
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking"] }
+lazy_static = "1.4"
+chrono = { version = "0.4", features = ["serde"]}
+governor = "0.3"
+futures = "0.3"
+nonzero_ext = "*"
+backoff = {version = "0.3.0", features = ["tokio"]}
+async-stream = "0.3"
+
+sqlx = { version = "0.5", features = [ "runtime-async-std-rustls", "postgres", "chrono", "json", "uuid" ] }

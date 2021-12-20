@@ -1,2 +1,3 @@
 # nft-pricer
-Multiple pricing strategies for NFTs 
+
+Multiple pricing strategies for NFTs
