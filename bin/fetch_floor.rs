@@ -3,16 +3,16 @@ use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::read::*;
 
-static COLLECTION: &'static str = "forgottenruneswizardscult";
-static TRAIT: &'static str = "dream master";
+static COLLECTION: &str = "forgottenruneswizardscult";
+static TRAIT: &str = "dream master";
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
-    let c = get_collection(&mut conn, COLLECTION).await?;
-    let assets_with_trait = get_assets_with_trait(&mut conn, COLLECTION, TRAIT)
+    let c = read_collection(&mut conn, COLLECTION).await?;
+    let assets_with_trait = read_assets_with_trait(&mut conn, COLLECTION, TRAIT)
         .await
         .unwrap();
 

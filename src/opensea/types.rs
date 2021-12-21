@@ -133,7 +133,7 @@ pub struct PaymentToken {
 
 impl PaymentToken {
     pub fn display_amount(&self, input_amount: u64) -> f64 {
-        let div = 10u64.pow((self.decimals - 2).into());
+        let div = 10u64.pow(self.decimals - 2);
         (input_amount / div) as f64 / 100.0
     }
 }
@@ -195,8 +195,8 @@ impl AssetsRequest {
         self
     }
 
-    pub fn asset_contract_address(&mut self, arg: &String) -> &mut Self {
-        self.asset_contract_address = Some(arg.clone());
+    pub fn asset_contract_address(&mut self, arg: &str) -> &mut Self {
+        self.asset_contract_address = Some(arg.to_string());
         self
     }
 

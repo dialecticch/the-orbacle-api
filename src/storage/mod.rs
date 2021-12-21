@@ -10,9 +10,9 @@ pub struct Trait {
 }
 #[derive(serde::Serialize, Debug)]
 pub struct Asset {
-    collection_slug: String,
+    pub collection_slug: String,
     pub token_id: i32,
-    traits: Vec<String>,
+    pub traits: Vec<String>,
 }
 
 #[derive(serde::Serialize, Debug)]

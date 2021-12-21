@@ -4,7 +4,7 @@ use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::write::*;
 
-static COLLECTION: &'static str = "forgottenruneswizardscult";
+static COLLECTION: &str = "forgottenruneswizardscult";
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn main() -> Result<()> {
     let all_assets = client.get_assets(req).await?;
 
     for a in &all_assets {
-        write_asset(&mut conn, &a, COLLECTION)
+        write_asset(&mut conn, a, COLLECTION)
             .await
             .unwrap_or_default();
     }

@@ -5,7 +5,7 @@ use sqlx::PgConnection;
 use std::collections::HashMap;
 
 // ============ Collection ============
-pub async fn get_collection(conn: &mut PgConnection, slug: &str) -> Result<Collection> {
+pub async fn read_collection(conn: &mut PgConnection, slug: &str) -> Result<Collection> {
     sqlx::query_as!(
         Collection,
         r#"
@@ -24,7 +24,7 @@ pub async fn get_collection(conn: &mut PgConnection, slug: &str) -> Result<Colle
 }
 
 // ============ Trait ============
-pub async fn get_trait(
+pub async fn read_trait(
     conn: &mut PgConnection,
     collection_slug: &str,
     trait_name: &str,
@@ -47,7 +47,7 @@ pub async fn get_trait(
     .map_err(|e| e.into())
 }
 
-pub async fn get_traits_for_asset(
+pub async fn read_traits_for_asset(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_id: i32,
@@ -78,7 +78,30 @@ pub async fn get_traits_for_asset(
 }
 
 // ============ Asset ============
-pub async fn get_assets_with_trait(
+pub async fn read_asset(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+) -> Result<Asset> {
+    sqlx::query_as!(
+        Asset,
+        r#"
+            select
+                * 
+            from
+                asset a     
+            where a.collection_slug = $1 and a.token_id = $2
+            
+        "#,
+        collection_slug,
+        token_id,
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+pub async fn read_assets_with_trait(
     conn: &mut PgConnection,
     collection_slug: &str,
     trait_name: &str,

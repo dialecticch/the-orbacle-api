@@ -1,5 +1,5 @@
 [package]
-name = "NftPricer"
+name = "nft-pricer"
 version = "0.1.0"
 edition = "2021"
 

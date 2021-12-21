@@ -38,7 +38,7 @@ impl OpenseaAPIClient {
         let rate_limiter = RateLimiter::direct(quota);
         Self {
             rate_limiter,
-            client: client,
+            client,
         }
     }
 
@@ -80,20 +80,20 @@ impl OpenseaAPIClient {
         collection: &str,
         token_ids: Vec<u64>,
     ) -> Result<Vec<Asset>> {
-        let req = AssetsRequest::new().collection(collection).build();
+        let req = AssetsRequest::new()
+            .collection(collection)
+            .limit(30)
+            .build();
 
         let token_ids = Self::token_ids_query(token_ids);
 
         let mut results = vec![];
         let mut call = 0;
         while results.len() < token_ids.len() {
+            let token_ids_to_fetch = &token_ids[usize::min(call * 30, token_ids.len())
+                ..usize::min((call + 1) * 30, token_ids.len())];
             let page: AssetsResponse = self
-                .fetch_page(
-                    ASSETS_PATH,
-                    &req,
-                    &token_ids[usize::min(call * 30, token_ids.len())
-                        ..usize::min((call + 1) * 30, token_ids.len())],
-                )
+                .fetch_page(ASSETS_PATH, &req, token_ids_to_fetch)
                 .await?;
             call += 1;
             results.extend(page.assets);
@@ -126,7 +126,7 @@ impl OpenseaAPIClient {
 
     async fn get_assets_parallel(&self, req: AssetsRequest) -> Result<Vec<Asset>> {
         let mut req = req;
-        let wanted = req.limit.unwrap_or(req.expected.unwrap_or(1000));
+        let wanted = req.limit.unwrap_or_else(|| req.expected.unwrap_or(1000));
         req.limit = Some(usize::min(wanted, 50));
 
         let mut stream = futures::stream::iter(0..wanted / req.limit.unwrap())

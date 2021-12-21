@@ -15,7 +15,6 @@ pub async fn write_asset(
         .traits
         .clone()
         .unwrap_or_default()
-        .clone()
         .into_iter()
         .map(|t| t.value.to_lowercase())
         .collect::<Vec<String>>();
@@ -73,8 +72,8 @@ pub async fn write_traits(conn: &mut PgConnection, collection: &Collection) -> R
                 .map(|(n, c)| Trait {
                     collection_slug: collection.slug.clone().to_lowercase(),
                     trait_type: k.clone().to_lowercase(),
-                    trait_name: n.clone().to_lowercase(),
-                    trait_count: c.clone() as i32,
+                    trait_name: n.to_lowercase(),
+                    trait_count: c as i32,
                 })
                 .collect::<Vec<Trait>>()
         })
