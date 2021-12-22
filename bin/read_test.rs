@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDate;
 use local::analyzers::{prices::*, rarities::*, sales::*};
 use local::storage::establish_connection;
 use local::storage::read::*;
@@ -90,6 +90,9 @@ pub async fn main() -> Result<()> {
         "Purchase Price Relative to Avg change for {}: \n{:?}\n",
         9850, at
     );
+    let at = read_latests_listing_for_asset(&mut conn, COLLECTION, 9850).await?;
+
+    println!("Latest listings for {}: \n{:?}\n", 9850, at);
 
     Ok(())
 }

@@ -273,7 +273,11 @@ pub struct EventsRequest {
     #[serde(skip_serializing)]
     pub expected: Option<usize>,
 }
-
+impl Default for EventsRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl EventsRequest {
     pub fn new() -> Self {
         Self {

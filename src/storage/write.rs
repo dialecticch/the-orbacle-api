@@ -1,9 +1,9 @@
-use anyhow::Result;
-use sqlx::postgres::PgQueryResult;
-use sqlx::{Acquire, PgConnection};
-
 use super::Trait;
 use crate::opensea::types::{Asset, Collection, Event};
+use anyhow::Result;
+use chrono::prelude::Utc;
+use sqlx::postgres::PgQueryResult;
+use sqlx::{Acquire, PgConnection};
 
 // ============ ASSET ============
 pub async fn write_asset(
@@ -133,6 +133,34 @@ pub async fn write_sale(
         token_id,
         sale.total_price as f64,
         sale.created_date.timestamp() as i32,
+    )
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+// ============ LISTINGS ============
+pub async fn write_listing(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+    price: Option<f64>,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+       insert into LISTING(
+        collection_slug,
+        token_id,
+        price,
+        timestamp
+       )
+       values
+           ($1, $2, $3, $4);
+       "#,
+        collection_slug.to_lowercase(),
+        token_id,
+        price,
+        Utc::now().timestamp() as i32,
     )
     .execute(conn)
     .await?;

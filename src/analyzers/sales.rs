@@ -59,7 +59,7 @@ pub async fn get_average_trait_sales_nr(
     let sale_history = get_trait_sales(conn, collection_slug, trait_name).await?;
     let count = nr.unwrap_or(sale_history.len());
 
-    if sale_history.len() < count || sale_history.len() == 0 {
+    if sale_history.len() < count || sale_history.is_empty() {
         Ok(None)
     } else {
         Ok(Some(

@@ -30,7 +30,14 @@ pub struct SaleEvent {
     pub price: f64,
 }
 
-use chrono::NaiveDateTime;
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct Listing {
+    pub collection_slug: String,
+    pub token_id: i32,
+    pub timestamp: i32,
+    pub price: Option<f64>,
+}
+
 use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;

@@ -1,4 +1,4 @@
-use super::{Asset, Collection, SaleEvent, Trait};
+use super::*;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use sqlx::PgConnection;
@@ -223,6 +223,31 @@ pub async fn read_avg_price_trait_at_ts(
         trait_name,
     )
     .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+// Sales
+
+pub async fn read_latests_listing_for_asset(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+) -> Result<Vec<Listing>> {
+    sqlx::query_as!(
+        Listing,
+        r#"
+            select
+                *
+            from
+                listing
+            where collection_slug = $1 and token_id = $2
+            order by timestamp desc
+        "#,
+        collection_slug,
+        token_id,
+    )
+    .fetch_all(&mut *conn)
     .await
     .map_err(|e| e.into())
 }

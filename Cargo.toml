@@ -12,12 +12,13 @@ name = "read"
 path = "bin/read_test.rs"
 
 [[bin]]
-name = "store"
-path = "bin/store_collection.rs"
-
-[[bin]]
 name = "fetch"
 path = "bin/fetch_profile.rs"
+
+
+[[bin]]
+name = "cli"
+path = "bin/cli.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
@@ -38,3 +39,4 @@ backoff = {version = "0.3.0", features = ["tokio"]}
 async-stream = "0.3"
 
 sqlx = { version = "0.5", features = [ "runtime-async-std-rustls", "postgres", "chrono", "json", "uuid" ] }
+clap = "2.34.0"

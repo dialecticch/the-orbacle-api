@@ -29,3 +29,13 @@ CREATE TABLE SALE (
 
     primary key (collection_slug, token_id, timestamp)
 );
+
+
+CREATE TABLE LISTING (
+    collection_slug VARCHAR NOT NULL,
+    token_id int NOT NULL,
+    price float,
+    timestamp INT NOT NULL,
+
+    primary key (collection_slug, token_id, timestamp)
+);
