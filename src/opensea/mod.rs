@@ -18,6 +18,7 @@ pub mod types;
 static API_BASE: &str = "https://api.opensea.io/api";
 
 static ASSETS_PATH: &str = "/v1/assets/";
+static EVENTS_PATH: &str = "/v1/events/";
 static COLLECTION_PATH: &str = "/v1/collection/";
 
 pub struct OpenseaAPIClient {
@@ -34,7 +35,7 @@ impl Default for OpenseaAPIClient {
 impl OpenseaAPIClient {
     pub fn new() -> Self {
         let client = reqwest::Client::new();
-        let quota = Quota::per_second(NonZeroU32::new(5u32).unwrap());
+        let quota = Quota::per_second(NonZeroU32::new(2u32).unwrap());
         let rate_limiter = RateLimiter::direct(quota);
         Self {
             rate_limiter,
@@ -58,8 +59,9 @@ impl OpenseaAPIClient {
             .query(&query)
             .query(&extra_query)
             .header("Accept-Encoding", "application/json")
+            .header("x-api-key", dotenv::var("API_KEY").unwrap())
             .build()?;
-        //println!("{}", reqw.url());
+        println!("{}", reqw.url());
         let resp = self.client.execute(reqw).await?;
         match resp.status() {
             StatusCode::OK => serde_json::from_str(&resp.text().await?).map_err(|e| e.into()),
@@ -72,6 +74,11 @@ impl OpenseaAPIClient {
 
     async fn fetch_assets_page(&self, req: AssetsRequest) -> Result<AssetsResponse> {
         self.fetch_page(ASSETS_PATH, &req, &EmptyRequest::default())
+            .await
+    }
+
+    async fn fetch_events_page(&self, req: EventsRequest) -> Result<EventsResponse> {
+        self.fetch_page(EVENTS_PATH, &req, &EmptyRequest::default())
             .await
     }
 
@@ -155,6 +162,60 @@ impl OpenseaAPIClient {
         Ok(results)
     }
 
+    async fn get_events_serial(&self, req: EventsRequest) -> Result<Vec<Event>> {
+        let mut req = req;
+        let wanted = req.limit.unwrap_or(8888);
+        req.limit = Some(usize::min(wanted, 50));
+
+        let mut results = vec![];
+        while results.len() < wanted {
+            let page = self.fetch_events_page(req.clone()).await?;
+            let new_results = page.asset_events.len();
+            if new_results == 0 {
+                break;
+            }
+            if let Some(offset) = req.offset {
+                req.offset = Some(offset + new_results);
+            } else {
+                req.offset = Some(new_results);
+            }
+            results.extend(page.asset_events);
+        }
+
+        Ok(results)
+    }
+
+    async fn get_events_parallel(&self, req: EventsRequest) -> Result<Vec<Event>> {
+        let mut req = req;
+        let wanted = req.limit.unwrap_or_else(|| req.expected.unwrap_or(1000));
+        req.limit = Some(usize::min(wanted, 50));
+
+        let mut stream = futures::stream::iter(0..wanted / req.limit.unwrap())
+            .map(|i| {
+                self.fetch_events_page(
+                    req.clone()
+                        .offset(req.offset.unwrap_or(0) + i * req.limit.unwrap())
+                        .build(),
+                )
+            })
+            .buffer_unordered(6);
+
+        let mut results = vec![];
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(mut resp) => {
+                    results.append(&mut resp.asset_events);
+                }
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
     pub async fn get_assets(&self, req: AssetsRequest) -> Result<Vec<Asset>> {
         #[allow(unused_variables)]
         if let Some(expected) = req.expected.as_ref() {
@@ -163,6 +224,17 @@ impl OpenseaAPIClient {
         } else {
             log::info!("Don't know expected, using serial fetcher");
             self.get_assets_serial(req).await
+        }
+    }
+
+    pub async fn get_events(&self, req: EventsRequest) -> Result<Vec<Event>> {
+        #[allow(unused_variables)]
+        if let Some(expected) = req.expected.as_ref() {
+            log::info!("Have expected, using parallel fetcher");
+            self.get_events_parallel(req).await
+        } else {
+            log::info!("Don't know expected, using serial fetcher");
+            self.get_events_serial(req).await
         }
     }
 

@@ -20,6 +20,7 @@ pub struct Collection {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct CollectionStats {
     pub total_supply: f64,
+    pub total_sales: f64,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -228,5 +229,108 @@ impl AssetsRequest {
 impl Default for AssetsRequest {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Event {
+    pub asset: Option<EmbeddedAsset>,
+    //pub event_timestamp: NaiveDateTime,
+    pub created_date: NaiveDateTime,
+    #[serde(flatten)]
+    pub variant: EventVariant,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "event_type", rename_all = "snake_case")]
+pub enum EventVariant {
+    Successful(Successful),
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Successful {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub total_price: f64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct EventsResponse {
+    pub asset_events: Vec<Event>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EventsRequest {
+    asset_contract_address: Option<String>,
+    collection_slug: Option<String>,
+    token_id: Option<u64>,
+    account_address: Option<String>,
+    event_type: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+
+    occurred_after: Option<String>,
+    occurred_before: Option<String>,
+    #[serde(skip_serializing)]
+    pub expected: Option<usize>,
+}
+
+impl EventsRequest {
+    pub fn new() -> Self {
+        Self {
+            asset_contract_address: None,
+            collection_slug: None,
+            token_id: None,
+            account_address: None,
+            event_type: None,
+            occurred_after: None,
+            occurred_before: None,
+            limit: None,
+            offset: None,
+            expected: None,
+        }
+    }
+
+    pub fn event_type(&mut self, arg: &str) -> &mut Self {
+        self.event_type = Some(arg.to_string());
+        self
+    }
+
+    pub fn asset_contract_address(&mut self, arg: &str) -> &mut Self {
+        self.asset_contract_address = Some(arg.to_string());
+        self
+    }
+
+    pub fn occurred_after(&mut self, arg: &str) -> &mut Self {
+        self.occurred_after = Some(arg.to_string());
+        self
+    }
+
+    pub fn occurred_before(&mut self, arg: &str) -> &mut Self {
+        self.occurred_before = Some(arg.to_string());
+        self
+    }
+
+    pub fn expected(&mut self, arg: usize) -> &mut Self {
+        self.expected = Some(arg);
+        self
+    }
+
+    pub fn token_id(&mut self, arg: u64) -> &mut Self {
+        self.token_id = Some(arg);
+        self
+    }
+
+    pub fn limit(&mut self, arg: usize) -> &mut Self {
+        self.limit = Some(arg);
+        self
+    }
+
+    pub fn offset(&mut self, arg: usize) -> &mut Self {
+        self.offset = Some(arg);
+        self
+    }
+
+    pub fn build(&mut self) -> Self {
+        self.clone()
     }
 }
