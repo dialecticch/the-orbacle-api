@@ -3,7 +3,7 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::{Acquire, PgConnection};
 
 use super::Trait;
-use crate::opensea::types::{Asset, Collection};
+use crate::opensea::types::{Asset, Collection, Event};
 
 // ============ ASSET ============
 pub async fn write_asset(
@@ -104,4 +104,37 @@ pub async fn write_traits(conn: &mut PgConnection, collection: &Collection) -> R
         .await?;
     }
     txn.commit().await.map_err(|e| e.into())
+}
+
+// ============ EVENTS ============
+pub async fn write_sale(
+    conn: &mut PgConnection,
+    sale: &Event,
+    collection_slug: &str,
+) -> Result<()> {
+    let token_id = if sale.asset.is_some() {
+        sale.asset.as_ref().unwrap().token_id as i32
+    } else {
+        // Bundles dont have an asset, we ignore bundle sales
+        return Ok(());
+    };
+    sqlx::query!(
+        r#"
+       insert into sale(
+        collection_slug,
+        token_id,
+        price,
+        timestamp
+       )
+       values
+           ($1, $2, $3, $4);
+       "#,
+        collection_slug.to_lowercase(),
+        token_id,
+        sale.total_price as f64,
+        sale.created_date.timestamp() as i32,
+    )
+    .execute(conn)
+    .await?;
+    Ok(())
 }

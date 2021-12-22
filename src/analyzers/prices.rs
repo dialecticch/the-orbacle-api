@@ -2,10 +2,29 @@ use crate::from_wei;
 use crate::opensea::OpenseaAPIClient;
 use crate::storage::read::*;
 use anyhow::Result;
+use chrono::prelude::Utc;
 use sqlx::PgConnection;
 
 use super::rarities::get_trait_rarities;
+use super::sales::*;
 
+pub async fn get_token_listing(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+) -> Result<Option<f64>> {
+    let client = OpenseaAPIClient::new();
+    let asset = client
+        .fetch_token_ids(collection_slug, vec![token_id as u64])
+        .await?[0]
+        .clone();
+
+    Ok(if asset.sell_orders.is_some() {
+        Some(from_wei(asset.sell_orders.unwrap()[0].current_price))
+    } else {
+        None
+    })
+}
 pub async fn get_trait_listing(
     conn: &mut PgConnection,
     collection_slug: &str,
@@ -61,30 +80,40 @@ pub async fn get_trait_floor(
     }
 }
 
+pub async fn get_collection_floor(conn: &mut PgConnection, collection_slug: &str) -> Result<f64> {
+    let client = OpenseaAPIClient::new();
+    let collection = client.get_collection(collection_slug).await?;
+
+    Ok(collection.collection.stats.floor_price)
+}
+
 pub async fn get_most_valued_trait_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_id: i32,
     rarity_cap: f64,
-) -> Result<(String, i32, f64)> {
+) -> Result<(Option<String>, Option<f64>)> {
     let token_traits = get_trait_rarities(conn, collection_slug, token_id)
         .await?
         .into_iter()
         .filter(|(_, r)| r < &rarity_cap)
         .collect::<Vec<_>>();
 
-    let mut highest_floor = (String::default(), 0i32, 0f64);
+    let mut highest_floor = (String::default(), 0f64);
     for (trait_name, _) in token_traits {
         let trait_listings = get_trait_listing(conn, collection_slug, &trait_name).await?;
         if !trait_listings.is_empty() {
-            if trait_listings[0].1 > highest_floor.2 {
+            if trait_listings[0].1 > highest_floor.1 {
                 highest_floor.0 = trait_name.clone();
-                highest_floor.1 = trait_listings[0].0;
-                highest_floor.2 = trait_listings[0].1;
+                highest_floor.1 = trait_listings[0].1;
             }
         }
     }
-    Ok(highest_floor)
+    Ok(if highest_floor.0 != String::default() {
+        (Some(highest_floor.0), Some(highest_floor.1))
+    } else {
+        (None, None)
+    })
 }
 
 pub async fn get_rarest_trait_floor(
@@ -110,6 +139,12 @@ pub async fn get_rarity_weighted_floor(
         .filter(|(_, r)| r < &rarity_cap)
         .collect::<Vec<_>>();
 
+    if token_traits.len() == 0 {
+        return Ok(get_rarest_trait_floor(conn, collection_slug, token_id)
+            .await?
+            .2);
+    }
+
     let mut floors = vec![];
     for (trait_name, raritiy) in token_traits {
         let trait_listings = get_trait_listing(conn, collection_slug, &trait_name).await?;
@@ -125,4 +160,145 @@ pub async fn get_rarity_weighted_floor(
         price += f.1 / (2f64 * f.2 / floors[idx - 1].2)
     }
     Ok(price)
+}
+
+pub async fn get_last_sale_price(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+) -> Result<Option<f64>> {
+    let asset_sales = get_asset_sales(conn, collection_slug, token_id).await?;
+
+    if !asset_sales.is_empty() {
+        Ok(Some(asset_sales.last().unwrap().1))
+    } else {
+        Ok(None)
+    }
+}
+
+pub async fn get_most_valued_trait_last_sale_avg(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+    rarity_cap: f64,
+    nr: Option<usize>,
+) -> Result<Option<f64>> {
+    let token_traits = get_trait_rarities(conn, collection_slug, token_id)
+        .await?
+        .into_iter()
+        .filter(|(_, r)| r < &rarity_cap)
+        .collect::<Vec<_>>();
+
+    let mut highest_sale = 0f64;
+    for (trait_name, _) in token_traits {
+        let trait_sales =
+            get_average_trait_sales_nr(conn, collection_slug, &trait_name, nr).await?;
+        if !trait_sales.is_none() {
+            if trait_sales.unwrap() > highest_sale {
+                highest_sale = trait_sales.unwrap();
+            }
+        }
+    }
+    Ok(if highest_sale != 0f64 {
+        Some(highest_sale)
+    } else {
+        None
+    })
+}
+
+pub async fn get_last_sale_relative_to_collection_avg(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+) -> Result<Option<f64>> {
+    let asset_sales = get_asset_sales(conn, collection_slug, token_id).await?;
+
+    if !asset_sales.is_empty() {
+        let last_sale = asset_sales.last().unwrap();
+        let avg_at_sale =
+            match get_average_collection_sales_at_ts(conn, collection_slug, &last_sale.2).await? {
+                Some(v) => v,
+                None => return Ok(None),
+            };
+
+        let avg_now = match get_average_collection_sales_at_ts(
+            conn,
+            collection_slug,
+            &Utc::now().naive_utc(),
+        )
+        .await?
+        {
+            Some(v) => v,
+            None => return Ok(None),
+        };
+
+        Ok(Some((last_sale.1 / avg_at_sale) * avg_now))
+    } else {
+        Ok(None)
+    }
+}
+
+pub async fn get_last_sale_relative_to_mvt_avg(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+    rarity_cap: f64,
+) -> Result<Option<f64>> {
+    let token_traits = get_trait_rarities(conn, collection_slug, token_id)
+        .await?
+        .into_iter()
+        .filter(|(_, r)| r < &rarity_cap)
+        .collect::<Vec<_>>();
+
+    let mut highest_sale = 0f64;
+    for (trait_name, _) in token_traits {
+        let trait_sales =
+            get_last_sale_relative_to_trait_avg(conn, collection_slug, &trait_name, token_id)
+                .await?;
+        if !trait_sales.is_none() {
+            if trait_sales.unwrap() > highest_sale {
+                highest_sale = trait_sales.unwrap();
+            }
+        }
+    }
+    Ok(if highest_sale != 0f64 {
+        Some(highest_sale)
+    } else {
+        None
+    })
+}
+
+pub async fn get_last_sale_relative_to_trait_avg(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    trait_name: &str,
+    token_id: i32,
+) -> Result<Option<f64>> {
+    let asset_sales = get_asset_sales(conn, collection_slug, token_id).await?;
+
+    if !asset_sales.is_empty() {
+        let last_sale = asset_sales.last().unwrap();
+        let avg_at_sale =
+            match get_average_trait_sales_at_ts(conn, collection_slug, trait_name, &last_sale.2)
+                .await?
+            {
+                Some(v) => v,
+                None => return Ok(None),
+            };
+        let avg_now = match get_average_trait_sales_at_ts(
+            conn,
+            collection_slug,
+            trait_name,
+            &Utc::now().naive_utc(),
+        )
+        .await?
+        {
+            Some(v) => v,
+            None => return Ok(None),
+        };
+
+        Ok(Some((last_sale.1 / avg_at_sale) * avg_now))
+    } else {
+        Ok(None)
+    }
 }

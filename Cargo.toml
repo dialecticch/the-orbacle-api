@@ -17,7 +17,7 @@ path = "bin/store_collection.rs"
 
 [[bin]]
 name = "fetch"
-path = "bin/fetch_floor.rs"
+path = "bin/fetch_profile.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]

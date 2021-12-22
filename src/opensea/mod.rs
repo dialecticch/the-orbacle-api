@@ -35,7 +35,7 @@ impl Default for OpenseaAPIClient {
 impl OpenseaAPIClient {
     pub fn new() -> Self {
         let client = reqwest::Client::new();
-        let quota = Quota::per_second(NonZeroU32::new(2u32).unwrap());
+        let quota = Quota::per_second(NonZeroU32::new(1u32).unwrap());
         let rate_limiter = RateLimiter::direct(quota);
         Self {
             rate_limiter,
@@ -61,7 +61,7 @@ impl OpenseaAPIClient {
             .header("Accept-Encoding", "application/json")
             .header("x-api-key", dotenv::var("API_KEY").unwrap())
             .build()?;
-        println!("{}", reqw.url());
+        //println!("{}", reqw.url());
         let resp = self.client.execute(reqw).await?;
         match resp.status() {
             StatusCode::OK => serde_json::from_str(&resp.text().await?).map_err(|e| e.into()),

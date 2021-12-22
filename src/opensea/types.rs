@@ -21,6 +21,7 @@ pub struct Collection {
 pub struct CollectionStats {
     pub total_supply: f64,
     pub total_sales: f64,
+    pub floor_price: f64,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -235,10 +236,9 @@ impl Default for AssetsRequest {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Event {
     pub asset: Option<EmbeddedAsset>,
-    //pub event_timestamp: NaiveDateTime,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub total_price: f64,
     pub created_date: NaiveDateTime,
-    #[serde(flatten)]
-    pub variant: EventVariant,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

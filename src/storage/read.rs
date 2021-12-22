@@ -1,5 +1,6 @@
-use super::{Asset, Collection, Trait};
+use super::{Asset, Collection, SaleEvent, Trait};
 use anyhow::Result;
+use chrono::NaiveDateTime;
 use sqlx::PgConnection;
 
 use std::collections::HashMap;
@@ -120,6 +121,108 @@ pub async fn read_assets_with_trait(
         trait_name,
     )
     .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+// Sales
+
+pub async fn read_sales_for_trait(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    trait_name: &str,
+) -> Result<Vec<SaleEvent>> {
+    sqlx::query_as!(
+        SaleEvent,
+        r#"
+            select
+                *
+            from
+                sale
+            where collection_slug = $1 and token_id = any(
+                select
+                    token_id
+                from
+                    asset a     
+                where a.collection_slug = $1 and  $2 = any(a.traits)
+            )
+        "#,
+        collection_slug,
+        trait_name,
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+pub async fn read_sales_for_asset(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+) -> Result<Vec<SaleEvent>> {
+    sqlx::query_as!(
+        SaleEvent,
+        r#"
+            select
+                *
+            from
+                sale
+            where collection_slug = $1 and token_id = $2
+        "#,
+        collection_slug,
+        token_id,
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+pub async fn read_avg_price_collection_at_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    timestamp: &NaiveDateTime,
+) -> Result<Option<f64>> {
+    let avg = sqlx::query_scalar!(
+        r#"
+            select
+                avg(price) 
+            from
+                sale
+            where collection_slug = $1 and timestamp < $2
+        "#,
+        collection_slug,
+        timestamp.timestamp() as i32,
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    Ok(avg)
+}
+
+pub async fn read_avg_price_trait_at_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    trait_name: &str,
+    timestamp: &NaiveDateTime,
+) -> Result<Option<f64>> {
+    sqlx::query_scalar!(
+        r#"
+            select
+                avg(price)
+            from
+                sale
+            where collection_slug = $1 and timestamp < $2 and token_id = any(
+                select
+                    token_id
+                from
+                    asset a     
+                where a.collection_slug = $1 and  $3 = any(a.traits)
+            )
+        "#,
+        collection_slug,
+        timestamp.timestamp() as i32,
+        trait_name,
+    )
+    .fetch_one(&mut *conn)
     .await
     .map_err(|e| e.into())
 }

@@ -22,6 +22,15 @@ pub struct Collection {
     pub total_supply: i32,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SaleEvent {
+    pub collection_slug: String,
+    pub token_id: i32,
+    pub timestamp: i32,
+    pub price: f64,
+}
+
+use chrono::NaiveDateTime;
 use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;

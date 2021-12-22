@@ -20,3 +20,12 @@ CREATE TABLE TRAIT (
 
     primary key (collection_slug, trait_type, trait_name)
 );
+
+CREATE TABLE SALE (
+    collection_slug VARCHAR NOT NULL,
+    token_id int NOT NULL,
+    price float NOT NULL,
+    timestamp INT NOT NULL,
+
+    primary key (collection_slug, token_id, timestamp)
+);
