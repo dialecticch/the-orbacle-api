@@ -39,10 +39,13 @@ pub async fn main() {
 
     if let Some(c) = matches.values_of("fetch") {
         let params = c.into_iter().collect::<Vec<_>>();
+        let pool = establish_connection().await;
+        let mut conn = pool.acquire().await.unwrap();
 
         println!("Building Asset Profile...");
 
         let profile = TokenProfile::make(
+            &mut conn,
             params[0],
             params[1]
                 .parse::<i32>()

@@ -23,13 +23,15 @@ pub async fn write_asset(
        insert into asset(
         collection_slug,
         token_id,
+        image_url,
         traits
        )
        values
-           ($1, $2, $3);
+           ($1, $2, $3, $4);
        "#,
         collection_slug.to_lowercase(),
         asset.token_id as i32,
+        asset.image_url,
         &trait_names,
     )
     .execute(conn)

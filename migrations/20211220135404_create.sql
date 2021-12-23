@@ -1,6 +1,7 @@
 CREATE TABLE ASSET (
     collection_slug VARCHAR NOT NULL,
     token_id INT NOT NULL,
+    image_url VARCHAR NOT NULL,
     traits VARCHAR[] NOT NULL,
     primary key (collection_slug, token_id)
 );

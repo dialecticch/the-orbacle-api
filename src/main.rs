@@ -1,3 +1,5 @@
-fn main() {
-    println!("Hello, world!");
+use local::api::server;
+#[tokio::main]
+async fn main() {
+    server::start().await
 }

@@ -37,6 +37,9 @@ futures = "0.3"
 nonzero_ext = "*"
 backoff = {version = "0.3.0", features = ["tokio"]}
 async-stream = "0.3"
-
+rweb = { version = "0.15", features = ["openapi", "chrono", "uuid"] }
+hyper = { version = "^0.14", default-features = false }
+hyper-rustls = "^0.23"
+derive_more = "0.99"
 sqlx = { version = "0.5", features = [ "runtime-async-std-rustls", "postgres", "chrono", "json", "uuid" ] }
 clap = "2.34.0"

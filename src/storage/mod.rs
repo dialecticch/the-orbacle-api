@@ -12,6 +12,7 @@ pub struct Trait {
 pub struct Asset {
     pub collection_slug: String,
     pub token_id: i32,
+    pub image_url: String,
     pub traits: Vec<String>,
 }
 

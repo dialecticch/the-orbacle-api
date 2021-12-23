@@ -104,6 +104,7 @@ pub struct EmbeddedAsset {
 pub struct Asset {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub token_id: u64,
+    pub image_url: String,
     pub sell_orders: Option<Vec<SellOrder>>,
     pub traits: Option<Vec<Trait>>,
 }
