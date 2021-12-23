@@ -133,7 +133,7 @@ pub async fn write_sale(
        "#,
         collection_slug.to_lowercase(),
         token_id,
-        sale.total_price as f64,
+        sale.total_price.clone().unwrap().parse::<f64>().unwrap(),
         sale.created_date.timestamp() as i32,
     )
     .execute(conn)

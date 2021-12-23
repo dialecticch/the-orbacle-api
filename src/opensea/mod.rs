@@ -110,7 +110,7 @@ impl OpenseaAPIClient {
 
     async fn get_assets_serial(&self, req: AssetsRequest) -> Result<Vec<Asset>> {
         let mut req = req;
-        let wanted = req.limit.unwrap_or(8888);
+        let wanted = req.limit.unwrap_or(10000);
         req.limit = Some(usize::min(wanted, 50));
 
         let mut results = vec![];
@@ -164,7 +164,7 @@ impl OpenseaAPIClient {
 
     async fn get_events_serial(&self, req: EventsRequest) -> Result<Vec<Event>> {
         let mut req = req;
-        let wanted = req.limit.unwrap_or(8888);
+        let wanted = req.limit.unwrap_or(10000);
         req.limit = Some(usize::min(wanted, 50));
 
         let mut results = vec![];

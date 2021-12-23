@@ -77,22 +77,22 @@ pub async fn main() -> Result<()> {
 
     println!("Avg trait {} price at {}: \n{:?}\n", TRAIT, &time, at);
 
-    let at = get_last_sale_relative_to_collection_avg(&mut conn, COLLECTION, 1233).await?;
+    let at = get_last_sale_relative_to_collection_avg(&mut conn, COLLECTION, 3477).await?;
 
     println!(
         "Purchase Price Relative to Avg change for {}: \n{:?}\n",
-        1233, at
+        3477, at
     );
 
-    let at = get_last_sale_relative_to_trait_avg(&mut conn, COLLECTION, TRAIT, 1233).await?;
+    let at = get_last_sale_relative_to_trait_avg(&mut conn, COLLECTION, TRAIT, 3477).await?;
 
     println!(
         "Purchase Price Relative to Avg change for {}: \n{:?}\n",
-        1233, at
+        3477, at
     );
-    let at = read_latests_listing_for_asset(&mut conn, COLLECTION, 1233).await?;
+    let at = read_latests_listing_for_asset(&mut conn, COLLECTION, 3477).await?;
 
-    println!("Latest listings for {}: \n{:?}\n", 1233, at);
+    println!("Latest listings for {}: \n{:?}\n", 3477, at);
 
     Ok(())
 }

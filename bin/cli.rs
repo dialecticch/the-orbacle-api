@@ -5,6 +5,7 @@ use local::opensea::types::{AssetsRequest, EventsRequest};
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::write::*;
+use local::updater::update_token_listings;
 
 use local::profiles::price_profile::TokenProfile;
 
@@ -31,10 +32,24 @@ pub async fn main() {
                 .help("fetch token data")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("update")
+                .short("-u")
+                .long("update")
+                .value_name("COLLECTION")
+                .help("update listing data")
+                .takes_value(true),
+        )
         .get_matches();
 
     if let Some(c) = matches.value_of("store") {
         store(c).await.unwrap();
+    }
+
+    if let Some(c) = matches.value_of("update") {
+        let pool = establish_connection().await;
+        let mut conn = pool.acquire().await.unwrap();
+        update_token_listings(&mut conn, c).await.unwrap();
     }
 
     if let Some(c) = matches.values_of("fetch") {

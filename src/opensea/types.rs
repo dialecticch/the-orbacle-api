@@ -237,23 +237,10 @@ impl Default for AssetsRequest {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Event {
     pub asset: Option<EmbeddedAsset>,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub total_price: f64,
+    pub total_price: Option<String>,
+    pub ending_price: Option<String>,
     pub created_date: NaiveDateTime,
 }
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "event_type", rename_all = "snake_case")]
-pub enum EventVariant {
-    Successful(Successful),
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct Successful {
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub total_price: f64,
-}
-
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct EventsResponse {
     pub asset_events: Vec<Event>,

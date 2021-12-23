@@ -11,41 +11,41 @@ use sqlx::PgConnection;
 use super::rarities::get_trait_rarities;
 use super::sales::*;
 
-static REFRESH_TIMEOUT: i32 = 7200;
+static REFRESH_TIMEOUT: i32 = 21600;
 
-pub async fn get_token_listing(
+pub async fn get_and_update_token_listings(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_id: i32,
-) -> Result<Option<f64>> {
+    token_ids: Vec<i32>,
+) -> Result<Vec<(i32, Option<f64>)>> {
     let client = OpenseaAPIClient::new();
 
-    let listing = read_latests_listing_for_asset(conn, collection_slug, token_id).await?;
-    if listing.is_empty() || listing[0].timestamp < Utc::now().timestamp() as i32 - REFRESH_TIMEOUT
-    {
-        let asset = client
-            .fetch_token_ids(collection_slug, vec![token_id as u64])
-            .await?[0]
-            .clone();
-        if asset.sell_orders.is_some() {
-            write_listing(
-                conn,
-                collection_slug,
-                token_id,
-                Some(asset.sell_orders.clone().unwrap()[0].current_price),
-            )
+    let mut map: Vec<(i32, Option<f64>)> = Vec::new();
+    let mut to_fetch = vec![];
+    for id in token_ids {
+        let listing = read_latests_listing_for_asset(conn, collection_slug, id).await?;
+        if listing.is_empty()
+            || listing[0].timestamp < Utc::now().timestamp() as i32 - REFRESH_TIMEOUT
+        {
+            to_fetch.push(id as u64);
+        } else {
+            map.push((id, listing[0].price));
+        }
+    }
+
+    let assets = client.fetch_token_ids(collection_slug, to_fetch).await?;
+    for asset in assets {
+        let price = if asset.sell_orders.is_some() {
+            Some(asset.sell_orders.clone().unwrap()[0].current_price)
+        } else {
+            None
+        };
+        write_listing(conn, collection_slug, asset.token_id as i32, price)
             .await
             .unwrap();
-            Ok(Some(asset.sell_orders.unwrap()[0].current_price))
-        } else {
-            write_listing(conn, collection_slug, token_id, None)
-                .await
-                .unwrap();
-            Ok(None)
-        }
-    } else {
-        Ok(listing[0].clone().price)
+        map.push((asset.token_id as i32, price));
     }
+    Ok(map)
 }
 pub async fn get_trait_listing(
     conn: &mut PgConnection,
@@ -56,16 +56,9 @@ pub async fn get_trait_listing(
         .await
         .unwrap();
 
-    let ids: Vec<_> = assets_with_trait
-        .into_iter()
-        .map(|a| a.token_id as u64)
-        .collect();
+    let ids: Vec<_> = assets_with_trait.into_iter().map(|a| a.token_id).collect();
 
-    let mut all_assets: Vec<_> = vec![];
-
-    for i in ids {
-        all_assets.push((i, get_token_listing(conn, collection_slug, i as i32).await?))
-    }
+    let mut all_assets: Vec<_> = get_and_update_token_listings(conn, collection_slug, ids).await?;
 
     all_assets = all_assets
         .into_iter()
@@ -115,7 +108,6 @@ pub async fn get_most_valued_trait_floor(
 
     let mut highest_floor = (String::default(), 0f64);
     for (trait_name, _) in token_traits {
-        println!("{:?}", trait_name);
         let trait_listings = get_trait_listing(conn, collection_slug, &trait_name).await?;
         if !trait_listings.is_empty() && trait_listings[0].1 > highest_floor.1 {
             highest_floor.0 = trait_name.clone();
