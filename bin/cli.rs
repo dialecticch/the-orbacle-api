@@ -5,7 +5,7 @@ use local::opensea::types::{AssetsRequest, EventsRequest};
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::write::*;
-use local::updater::update_token_listings;
+use local::updater::{update_collection_listings, update_collection_sales};
 
 use local::profiles::price_profile::TokenProfile;
 
@@ -49,7 +49,8 @@ pub async fn main() {
     if let Some(c) = matches.value_of("update") {
         let pool = establish_connection().await;
         let mut conn = pool.acquire().await.unwrap();
-        update_token_listings(&mut conn, c).await.unwrap();
+        update_collection_listings(&mut conn, c).await.unwrap();
+        update_collection_sales(&mut conn, c).await.unwrap();
     }
 
     if let Some(c) = matches.values_of("fetch") {

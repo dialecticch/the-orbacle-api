@@ -155,6 +155,26 @@ pub async fn read_sales_for_trait(
     .map_err(|e| e.into())
 }
 
+pub async fn read_latest_sale_for_collection(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+) -> Result<i32> {
+    sqlx::query_scalar!(
+        r#"
+                select
+                    distinct(timestamp)
+                from
+                    sale
+                where collection_slug = $1 
+                order by timestamp desc
+            "#,
+        collection_slug,
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 pub async fn read_sales_for_asset(
     conn: &mut PgConnection,
     collection_slug: &str,

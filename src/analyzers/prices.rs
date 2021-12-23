@@ -1,9 +1,6 @@
 use crate::from_wei;
 use crate::opensea::OpenseaAPIClient;
-use crate::storage::{
-    read::*,
-    write::{write_asset, write_listing},
-};
+use crate::storage::{read::*, write::write_asset};
 use anyhow::Result;
 use chrono::prelude::Utc;
 use sqlx::PgConnection;
@@ -11,40 +8,18 @@ use sqlx::PgConnection;
 use super::rarities::get_trait_rarities;
 use super::sales::*;
 
-static REFRESH_TIMEOUT: i32 = 21600;
-
 pub async fn get_and_update_token_listings(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_ids: Vec<i32>,
 ) -> Result<Vec<(i32, Option<f64>)>> {
-    let client = OpenseaAPIClient::new();
-
     let mut map: Vec<(i32, Option<f64>)> = Vec::new();
-    let mut to_fetch = vec![];
     for id in token_ids {
         let listing = read_latests_listing_for_asset(conn, collection_slug, id).await?;
-        if listing.is_empty()
-            || listing[0].timestamp < Utc::now().timestamp() as i32 - REFRESH_TIMEOUT
-        {
-            to_fetch.push(id as u64);
-        } else {
-            map.push((id, listing[0].price));
-        }
+
+        map.push((id, listing[0].price));
     }
 
-    let assets = client.fetch_token_ids(collection_slug, to_fetch).await?;
-    for asset in assets {
-        let price = if asset.sell_orders.is_some() {
-            Some(asset.sell_orders.clone().unwrap()[0].current_price)
-        } else {
-            None
-        };
-        write_listing(conn, collection_slug, asset.token_id as i32, price)
-            .await
-            .unwrap();
-        map.push((asset.token_id as i32, price));
-    }
     Ok(map)
 }
 pub async fn get_trait_listing(
