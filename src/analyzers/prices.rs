@@ -8,7 +8,7 @@ use sqlx::PgConnection;
 use super::rarities::get_trait_rarities;
 use super::sales::*;
 
-pub async fn get_and_update_token_listings(
+pub async fn get_token_listings(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_ids: Vec<i32>,
@@ -33,7 +33,7 @@ pub async fn get_trait_listing(
 
     let ids: Vec<_> = assets_with_trait.into_iter().map(|a| a.token_id).collect();
 
-    let mut all_assets: Vec<_> = get_and_update_token_listings(conn, collection_slug, ids).await?;
+    let mut all_assets: Vec<_> = get_token_listings(conn, collection_slug, ids).await?;
 
     all_assets = all_assets
         .into_iter()
