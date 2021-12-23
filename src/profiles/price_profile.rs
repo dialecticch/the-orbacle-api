@@ -55,8 +55,7 @@ impl TokenProfile {
         let collection_floor = get_collection_floor(collection_slug).await?;
 
         log::info!("Getting listing_price");
-        let listing_price =
-            get_and_update_token_listings(conn, collection_slug, vec![token_id]).await?[0].1;
+        let listing_price = get_token_listings(conn, collection_slug, vec![token_id]).await?[0].1;
 
         log::info!("Getting rarest_trait");
         let rarest_trait = get_rarest_trait_floor(conn, collection_slug, token_id)

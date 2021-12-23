@@ -125,8 +125,7 @@ pub async fn read_assets_with_trait(
     .map_err(|e| e.into())
 }
 
-// Sales
-
+// ============ Sales ============
 pub async fn read_sales_for_trait(
     conn: &mut PgConnection,
     collection_slug: &str,
@@ -247,8 +246,7 @@ pub async fn read_avg_price_trait_at_ts(
     .map_err(|e| e.into())
 }
 
-// Sales
-
+// ============ Listings ============
 pub async fn read_latests_listing_for_asset(
     conn: &mut PgConnection,
     collection_slug: &str,
