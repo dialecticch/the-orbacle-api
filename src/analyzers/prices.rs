@@ -115,6 +115,7 @@ pub async fn get_most_valued_trait_floor(
 
     let mut highest_floor = (String::default(), 0f64);
     for (trait_name, _) in token_traits {
+        println!("{:?}", trait_name);
         let trait_listings = get_trait_listing(conn, collection_slug, &trait_name).await?;
         if !trait_listings.is_empty() && trait_listings[0].1 > highest_floor.1 {
             highest_floor.0 = trait_name.clone();

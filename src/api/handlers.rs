@@ -30,6 +30,7 @@ pub async fn get_profile(
     token_id: i32,
     collection: String,
 ) -> Result<Json<TokenProfile>, Rejection> {
+    println!("/get_profile/{}/{}", collection, token_id);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
     TokenProfile::make(&mut conn, &collection.to_string(), token_id, 1)

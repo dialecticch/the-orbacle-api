@@ -1,4 +1,5 @@
 use crate::analyzers::prices::*;
+use crate::analyzers::sales::*;
 use crate::analyzers::velocity::*;
 use crate::storage::read::{read_asset, read_collection};
 use anyhow::Result;
@@ -44,34 +45,58 @@ impl TokenProfile {
         token_id: i32,
         cutoff: i32,
     ) -> Result<Self> {
+        println!("Getting asset");
         let asset = read_asset(conn, collection_slug, token_id).await?;
 
+        println!("Getting collection_address");
         let collection_address = read_collection(conn, collection_slug).await?.address;
+
+        println!("Getting collection_floor");
         let collection_floor = get_collection_floor(collection_slug).await?;
 
+        println!("Getting listing_price");
         let listing_price = get_token_listing(conn, collection_slug, token_id).await?;
+
+        println!("Getting rarest_trait");
         let rarest_trait = get_rarest_trait_floor(conn, collection_slug, token_id)
             .await?
             .0;
 
+        println!("Getting most_rare_trait_floor");
         let most_rare_trait_floor = get_rarest_trait_floor(conn, collection_slug, token_id)
             .await?
             .2;
 
+        println!("Getting most_valuable_trait_resp");
         let most_valuable_trait_resp =
-            get_most_valued_trait_floor(conn, collection_slug, token_id, 1f64).await?;
+            get_most_valued_trait_floor(conn, collection_slug, token_id, 0.03).await?;
+
+        println!("Getting most_valued_trait_floor");
         let most_valued_trait = most_valuable_trait_resp.0;
         let most_valued_trait_floor = most_valuable_trait_resp.1;
 
+        println!("Getting rarity_weighted_floor");
         let rarity_weighted_floor =
             get_rarity_weighted_floor(conn, collection_slug, token_id, cutoff as f64 / 100f64)
                 .await?;
+
+        println!("Getting last_sale");
         let last_sale = get_last_sale_price(conn, collection_slug, token_id).await?;
-        let avg_last_three_mvt_sales =
-            get_most_valued_trait_last_sale_avg(conn, collection_slug, token_id, 1f64, Some(3))
-                .await?;
+
+        println!("Getting avg_last_three_mvt_sales");
+        let avg_last_three_mvt_sales = get_average_trait_sales_nr(
+            conn,
+            collection_slug,
+            &most_valued_trait.clone().unwrap_or_default(),
+            Some(3),
+        )
+        .await?;
+
+        println!("Getting last_sale_relative_collection_avg");
         let last_sale_relative_collection_avg =
             get_last_sale_relative_to_collection_avg(conn, collection_slug, token_id).await?;
+
+        println!("Getting last_sale_relative_mvt_avg");
         let last_sale_relative_mvt_avg = get_last_sale_relative_to_trait_avg(
             conn,
             collection_slug,
@@ -80,10 +105,15 @@ impl TokenProfile {
         )
         .await?;
 
+        println!("Getting avg_sale_frequency_30d");
         let avg_sale_frequency_30d =
             get_avg_sale_frequency(conn, collection_slug, token_id, 30).await?;
+
+        println!("Getting lowest_sale_frequency_30d");
         let lowest_sale_frequency_30d =
             get_lowest_sale_frequency(conn, collection_slug, token_id, 30).await?;
+
+        println!("Getting mvt_sale_frequency_30d");
         let mvt_sale_frequency_30d = get_sale_frequency_trait(
             conn,
             collection_slug,
@@ -92,6 +122,7 @@ impl TokenProfile {
         )
         .await?;
 
+        println!("Getting rarest_trait_sale_frequency_30d");
         let rarest_trait_sale_frequency_30d =
             get_sale_frequency_trait(conn, collection_slug, &rarest_trait.clone(), 30).await?;
 
