@@ -25,14 +25,17 @@ pub async fn update_collection_listings(
     let cancelled = client.get_events(req).await.unwrap();
     println!("{} Cancelled Listings", cancelled.len());
     for event in cancelled {
-        write_listing(
+        match write_listing(
             conn,
             collection_slug,
             event.asset.unwrap().token_id as i32,
             None,
         )
         .await
-        .unwrap();
+        {
+            Err(e) => println!("Error Storing: {}", e),
+            _ => (),
+        }
     }
 
     let req = EventsRequest::new()

@@ -1,59 +1,19 @@
-use crate::from_wei;
 use crate::opensea::OpenseaAPIClient;
-use crate::storage::{read::*, write::write_asset};
+use crate::storage::write::write_asset;
 use anyhow::Result;
 use chrono::prelude::Utc;
 use sqlx::PgConnection;
 
+use super::listings::get_trait_listings;
 use super::rarities::get_trait_rarities;
 use super::sales::*;
-
-pub async fn get_token_listings(
-    conn: &mut PgConnection,
-    collection_slug: &str,
-    token_ids: Vec<i32>,
-) -> Result<Vec<(i32, Option<f64>)>> {
-    let mut map: Vec<(i32, Option<f64>)> = Vec::new();
-    for id in token_ids {
-        let listing = read_latests_listing_for_asset(conn, collection_slug, id).await?;
-
-        map.push((id, listing[0].price));
-    }
-
-    Ok(map)
-}
-pub async fn get_trait_listing(
-    conn: &mut PgConnection,
-    collection_slug: &str,
-    trait_name: &str,
-) -> Result<Vec<(i32, f64)>> {
-    let assets_with_trait = read_assets_with_trait(conn, collection_slug, trait_name)
-        .await
-        .unwrap();
-
-    let ids: Vec<_> = assets_with_trait.into_iter().map(|a| a.token_id).collect();
-
-    let mut all_assets: Vec<_> = get_token_listings(conn, collection_slug, ids).await?;
-
-    all_assets = all_assets
-        .into_iter()
-        .filter(|a| a.1.is_some())
-        .collect::<Vec<_>>();
-
-    all_assets.sort_by(|a, b| a.1.unwrap().partial_cmp(&b.1.unwrap()).unwrap());
-
-    Ok(all_assets
-        .into_iter()
-        .map(|t| (t.0 as i32, from_wei(t.1.unwrap())))
-        .collect())
-}
 
 pub async fn get_trait_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
     trait_name: &str,
 ) -> Result<Option<(i32, f64)>> {
-    let listings = get_trait_listing(conn, collection_slug, trait_name).await?;
+    let listings = get_trait_listings(conn, collection_slug, trait_name).await?;
 
     if listings.is_empty() {
         Ok(None)
@@ -83,7 +43,7 @@ pub async fn get_most_valued_trait_floor(
 
     let mut highest_floor = (String::default(), 0f64);
     for (trait_name, _) in token_traits {
-        let trait_listings = get_trait_listing(conn, collection_slug, &trait_name).await?;
+        let trait_listings = get_trait_listings(conn, collection_slug, &trait_name).await?;
         if !trait_listings.is_empty() && trait_listings[0].1 > highest_floor.1 {
             highest_floor.0 = trait_name.clone();
             highest_floor.1 = trait_listings[0].1;
@@ -113,7 +73,7 @@ pub async fn get_rarest_trait_floor(
         token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
     }
 
-    let listings = get_trait_listing(conn, collection_slug, &token_traits[0].0).await?;
+    let listings = get_trait_listings(conn, collection_slug, &token_traits[0].0).await?;
     if !listings.is_empty() {
         Ok((
             token_traits[0].0.clone(),
@@ -146,7 +106,7 @@ pub async fn get_rarity_weighted_floor(
 
     let mut floors = vec![];
     for (trait_name, raritiy) in token_traits {
-        let trait_listings = get_trait_listing(conn, collection_slug, &trait_name).await?;
+        let trait_listings = get_trait_listings(conn, collection_slug, &trait_name).await?;
         if !trait_listings.is_empty() {
             floors.push((trait_listings[0].0, trait_listings[0].1, raritiy));
         }

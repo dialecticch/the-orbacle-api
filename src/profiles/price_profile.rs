@@ -1,3 +1,4 @@
+use crate::analyzers::listings::*;
 use crate::analyzers::prices::*;
 use crate::analyzers::sales::*;
 use crate::analyzers::velocity::*;
@@ -19,6 +20,8 @@ pub struct PriceProfile {
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
 pub struct VelocityProfile {
+    pub rarest_trait_nr_listed: usize,
+    pub mvt_nr_listed: usize,
     pub rarest_trait_sale_frequency_30d: f64,
     pub mvt_sale_frequency_30d: f64,
     pub lowest_sale_frequency_30d: f64,
@@ -105,6 +108,18 @@ impl TokenProfile {
         )
         .await?;
 
+        log::info!("Getting rarest_trait_nr_listed");
+        let rarest_trait_nr_listed =
+            get_trait_nr_listed(conn, collection_slug, &rarest_trait.clone()).await?;
+
+        log::info!("Getting mvt_nr_listed");
+        let mvt_nr_listed = get_trait_nr_listed(
+            conn,
+            collection_slug,
+            &most_valued_trait.clone().unwrap_or_default(),
+        )
+        .await?;
+
         log::info!("Getting avg_sale_frequency_30d");
         let avg_sale_frequency_30d =
             get_avg_sale_frequency(conn, collection_slug, token_id, 30).await?;
@@ -162,6 +177,8 @@ impl TokenProfile {
                 max_price: prices[0],
             },
             velocity_profile: VelocityProfile {
+                rarest_trait_nr_listed,
+                mvt_nr_listed,
                 lowest_sale_frequency_30d: lowest_sale_frequency_30d.1,
                 rarest_trait_sale_frequency_30d,
                 avg_sale_frequency_30d,
