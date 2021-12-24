@@ -125,6 +125,28 @@ pub async fn read_assets_with_trait(
     .map_err(|e| e.into())
 }
 
+pub async fn read_assets_for_owner(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    owner_address: &str,
+) -> Result<Option<i64>> {
+    sqlx::query_scalar!(
+        r#"
+            select
+                count(*) 
+            from
+                asset a     
+            where a.collection_slug = $1 and  a.owner = $2 
+            
+        "#,
+        collection_slug,
+        owner_address,
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 // ============ Sales ============
 pub async fn read_sales_for_trait(
     conn: &mut PgConnection,

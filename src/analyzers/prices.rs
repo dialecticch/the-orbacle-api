@@ -1,5 +1,4 @@
 use crate::opensea::OpenseaAPIClient;
-use crate::storage::write::write_asset;
 use anyhow::Result;
 use chrono::prelude::Utc;
 use sqlx::PgConnection;
@@ -61,17 +60,7 @@ pub async fn get_rarest_trait_floor(
     collection_slug: &str,
     token_id: i32,
 ) -> Result<(String, Option<i32>, Option<f64>)> {
-    let mut token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
-
-    if token_traits.is_empty() {
-        let client = OpenseaAPIClient::new();
-        let a = client
-            .fetch_token_ids(collection_slug, vec![token_id as u64])
-            .await?;
-
-        write_asset(conn, &a[0], collection_slug).await.unwrap();
-        token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
-    }
+    let token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
 
     let listings = get_trait_listings(conn, collection_slug, &token_traits[0].0).await?;
     if !listings.is_empty() {

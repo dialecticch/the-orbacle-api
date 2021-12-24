@@ -4,10 +4,11 @@ use clap::{App, Arg};
 use local::opensea::types::{AssetsRequest, EventsRequest};
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
+use local::storage::preprocess;
 use local::storage::write::*;
 use local::updater::{update_collection_listings, update_collection_sales};
 
-use local::profiles::price_profile::TokenProfile;
+use local::profiles::token_profile::TokenProfile;
 
 #[tokio::main]
 pub async fn main() {
@@ -101,9 +102,20 @@ async fn store(collection_slug: &str) -> Result<()> {
 
     let all_assets = client.get_assets(req).await?;
 
-    for a in &all_assets {
-        write_asset(&mut conn, a, collection_slug).await.unwrap();
+    println!("  Storing assets...");
 
+    let processed =
+        preprocess::process_assets(&mut conn, all_assets.clone(), collection_slug).await?;
+
+    for a in &processed {
+        write_asset(&mut conn, a).await.unwrap();
+    }
+
+    println!("  Stored {} assets!", all_assets.len());
+
+    println!("  Storing listings...");
+
+    for a in &all_assets {
         if a.sell_orders.is_some() {
             write_listing(
                 &mut conn,
@@ -119,7 +131,7 @@ async fn store(collection_slug: &str) -> Result<()> {
                 .unwrap();
         }
     }
-    println!("  Stored {} assets!", all_assets.len());
+    println!("  Stored {} Listings!", all_assets.len());
 
     println!("  Fetching events...");
 

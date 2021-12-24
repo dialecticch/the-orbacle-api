@@ -1,19 +1,27 @@
+pub mod preprocess;
 pub mod read;
 pub mod write;
 
 #[derive(serde::Serialize, Debug)]
 pub struct Trait {
-    collection_slug: String,
-    trait_type: String,
-    trait_name: String,
-    trait_count: i32,
+    pub collection_slug: String,
+    pub trait_type: String,
+    pub trait_name: String,
+    pub trait_count: i32,
 }
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, Debug, Clone)]
 pub struct Asset {
+    pub name: String,
     pub collection_slug: String,
     pub token_id: i32,
     pub image_url: String,
+    pub owner: String,
     pub traits: Vec<String>,
+    pub rarity_score: f64,
+    pub unique_traits: i32,
+    pub unique_3_trait_combinations: i32,
+    pub unique_4_trait_combinations: i32,
+    pub unique_5_trait_combinations: i32,
 }
 
 #[derive(serde::Serialize, Debug)]

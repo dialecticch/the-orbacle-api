@@ -1,5 +1,5 @@
 use super::errors::internal_error;
-use crate::profiles::price_profile::TokenProfile;
+use crate::profiles::token_profile::TokenProfile;
 use anyhow::Result;
 use rweb::*;
 use sqlx::PgPool;

@@ -33,13 +33,17 @@ pub struct SellOrder {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct Owner {
+    pub address: String,
+}
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Trait {
     trait_type: String,
     #[serde(deserialize_with = "deserialize_string_from_number")]
     pub value: String,
     display_type: Option<String>,
     max_value: Option<u64>,
-    trait_count: Option<u64>,
+    pub trait_count: Option<u64>,
     order: Option<String>,
 }
 
@@ -102,11 +106,13 @@ pub struct EmbeddedAsset {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Asset {
+    pub name: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub token_id: u64,
     pub image_url: String,
     pub sell_orders: Option<Vec<SellOrder>>,
     pub traits: Option<Vec<Trait>>,
+    pub owner: Owner,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

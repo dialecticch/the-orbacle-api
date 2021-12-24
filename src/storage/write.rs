@@ -1,38 +1,41 @@
 use super::Trait;
-use crate::opensea::types::{Asset, Collection, Event};
+use crate::opensea::types::{Collection, Event};
 use anyhow::Result;
 use chrono::prelude::Utc;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Acquire, PgConnection};
 
 // ============ ASSET ============
-pub async fn write_asset(
-    conn: &mut PgConnection,
-    asset: &Asset,
-    collection_slug: &str,
-) -> Result<PgQueryResult> {
-    let trait_names = asset
-        .traits
-        .clone()
-        .unwrap_or_default()
-        .into_iter()
-        .map(|t| t.value.to_lowercase())
-        .collect::<Vec<String>>();
+pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
        insert into asset(
+        name,
         collection_slug,
         token_id,
         image_url,
-        traits
+        owner,
+        traits,
+        rarity_score,
+        unique_traits,
+        unique_5_trait_combinations,
+        unique_3_trait_combinations,
+        unique_4_trait_combinations
        )
        values
-           ($1, $2, $3, $4);
+           ($1, $2, $3, $4,$5, $6, $7, $8, $9, $10, $11);
        "#,
-        collection_slug.to_lowercase(),
+        asset.name,
+        asset.collection_slug.to_lowercase(),
         asset.token_id as i32,
         asset.image_url,
-        &trait_names,
+        asset.owner,
+        &asset.traits,
+        asset.rarity_score,
+        asset.unique_traits,
+        asset.unique_5_trait_combinations,
+        asset.unique_3_trait_combinations,
+        asset.unique_4_trait_combinations,
     )
     .execute(conn)
     .await

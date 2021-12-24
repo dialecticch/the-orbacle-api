@@ -1,5 +1,5 @@
 use anyhow::Result;
-use local::profiles::price_profile::TokenProfile;
+use local::profiles::token_profile::TokenProfile;
 use local::storage::establish_connection;
 static COLLECTION: &str = "forgottenruneswizardscult";
 #[tokio::main]
