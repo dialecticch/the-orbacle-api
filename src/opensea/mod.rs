@@ -13,6 +13,10 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::num::NonZeroU32;
 
+use backoff::future::retry;
+use backoff::ExponentialBackoff;
+use std::time::Duration;
+
 pub mod types;
 
 static API_BASE: &str = "https://api.opensea.io/api";
@@ -28,14 +32,14 @@ pub struct OpenseaAPIClient {
 
 impl Default for OpenseaAPIClient {
     fn default() -> Self {
-        Self::new()
+        Self::new(1)
     }
 }
 
 impl OpenseaAPIClient {
-    pub fn new() -> Self {
+    pub fn new(ps: u32) -> Self {
         let client = reqwest::Client::new();
-        let quota = Quota::per_second(NonZeroU32::new(3u32).unwrap());
+        let quota = Quota::per_second(NonZeroU32::new(ps).unwrap());
         let rate_limiter = RateLimiter::direct(quota);
         Self {
             rate_limiter,
@@ -53,16 +57,25 @@ impl OpenseaAPIClient {
         for<'de> R: Deserialize<'de> + 'a,
     {
         self.rate_limiter.until_ready().await;
-        let reqw = self
-            .client
-            .get(API_BASE.to_string() + path)
-            .query(&query)
-            .query(&extra_query)
-            .header("Accept-Encoding", "application/json")
-            .header("x-api-key", dotenv::var("API_KEY").unwrap())
-            .build()?;
-        println!("{}", reqw.url());
-        let resp = self.client.execute(reqw).await?;
+        let backoff = ExponentialBackoff {
+            max_elapsed_time: Some(Duration::from_secs(60)),
+            ..Default::default()
+        };
+
+        let resp = retry(backoff, || async {
+            let reqw = self
+                .client
+                .get(API_BASE.to_string() + path)
+                .query(&query)
+                .query(&extra_query)
+                .header("Accept-Encoding", "application/json")
+                .header("x-api-key", dotenv::var("API_KEY").unwrap())
+                .build()?;
+            println!("{}", reqw.url());
+            let response = self.client.execute(reqw).await?;
+            Ok(response)
+        })
+        .await?;
         match resp.status() {
             StatusCode::OK => serde_json::from_str(&resp.text().await?).map_err(|e| e.into()),
             _ => match resp.text().await {

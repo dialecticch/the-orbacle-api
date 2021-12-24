@@ -6,7 +6,7 @@ use local::storage::read::*;
 
 static COLLECTION: &str = "forgottenruneswizardscult";
 static TRAIT: &str = "flaming skull";
-static TOKEN_ID: i32 = 8046;
+static TOKEN_ID: i32 = 777;
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -27,9 +27,9 @@ pub async fn main() -> Result<()> {
 
     // println!("Assets with Trait: \n{:?}\n", &assets_with_trait.len());
 
-    // let at = read_traits_for_asset(&mut conn, COLLECTION, TOKEN_ID).await?;
+    let at = read_traits_for_asset(&mut conn, COLLECTION, TOKEN_ID).await?;
 
-    // println!("Traits for Asset: \n{:?}\n", at);
+    println!("Traits for Asset: \n{:?}\n", at);
 
     let at = get_trait_rarities(&mut conn, COLLECTION, TOKEN_ID).await?;
 

@@ -82,7 +82,7 @@ async fn store(collection_slug: &str) -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
-    let client = OpenseaAPIClient::new();
+    let client = OpenseaAPIClient::new(2);
     let collection = client.get_collection(collection_slug).await?;
 
     write_collection(&mut conn, &collection.collection).await?;
@@ -97,7 +97,7 @@ async fn store(collection_slug: &str) -> Result<()> {
 
     let req = AssetsRequest::new()
         .collection(collection_slug)
-        .expected(size)
+        .expected(10000)
         .build();
 
     let all_assets = client.get_assets(req).await?;
@@ -134,6 +134,8 @@ async fn store(collection_slug: &str) -> Result<()> {
     println!("  Stored {} Listings!", all_assets.len());
 
     println!("  Fetching events...");
+
+    let client = OpenseaAPIClient::new(1);
 
     let req = EventsRequest::new()
         .asset_contract_address(&collection.collection.primary_asset_contracts[0].address)

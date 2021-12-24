@@ -14,7 +14,7 @@ pub async fn update_collection_listings(
 
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
-    let client = OpenseaAPIClient::new();
+    let client = OpenseaAPIClient::new(3);
 
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
@@ -25,7 +25,7 @@ pub async fn update_collection_listings(
     let cancelled = client.get_events(req).await.unwrap();
     println!("{} Cancelled Listings", cancelled.len());
     for event in cancelled {
-        match write_listing(
+        if let Err(e) = write_listing(
             conn,
             collection_slug,
             event.asset.unwrap().token_id as i32,
@@ -33,8 +33,7 @@ pub async fn update_collection_listings(
         )
         .await
         {
-            Err(e) => println!("Error Storing: {}", e),
-            _ => (),
+            println!("Error Storing: {}", e)
         }
     }
 
@@ -87,7 +86,7 @@ pub async fn update_collection_sales(conn: &mut PgConnection, collection_slug: &
 
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
-    let client = OpenseaAPIClient::new();
+    let client = OpenseaAPIClient::new(3);
 
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)

@@ -22,7 +22,7 @@ pub async fn get_trait_floor(
 }
 
 pub async fn get_collection_floor(collection_slug: &str) -> Result<f64> {
-    let client = OpenseaAPIClient::new();
+    let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(collection_slug).await?;
 
     Ok(collection.collection.stats.floor_price)

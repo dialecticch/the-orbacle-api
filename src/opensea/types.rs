@@ -38,13 +38,13 @@ pub struct Owner {
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Trait {
-    trait_type: String,
+    pub trait_type: String,
     #[serde(deserialize_with = "deserialize_string_from_number")]
     pub value: String,
-    display_type: Option<String>,
-    max_value: Option<u64>,
+    pub display_type: Option<String>,
+    pub max_value: Option<u64>,
     pub trait_count: Option<u64>,
-    order: Option<String>,
+    pub order: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
