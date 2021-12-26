@@ -19,9 +19,12 @@ pub struct Asset {
     pub traits: Vec<String>,
     pub rarity_score: f64,
     pub unique_traits: i32,
-    pub unique_3_trait_combinations: i32,
-    pub unique_4_trait_combinations: i32,
-    pub unique_5_trait_combinations: i32,
+    pub traits_3_combination_overlap: i32,
+    pub traits_4_combination_overlap: i32,
+    pub traits_5_combination_overlap: i32,
+    pub traits_3_combination_overlap_ids: Vec<i32>,
+    pub traits_4_combination_overlap_ids: Vec<i32>,
+    pub traits_5_combination_overlap_ids: Vec<i32>,
 }
 
 #[derive(serde::Serialize, Debug)]

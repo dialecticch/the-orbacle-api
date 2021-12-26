@@ -4,6 +4,7 @@ use crate::opensea::types::Asset as OpenseaAsset;
 use anyhow::Result;
 use itertools::Itertools;
 use sqlx::PgConnection;
+use std::collections::HashSet;
 
 pub async fn process_assets(
     conn: &mut PgConnection,
@@ -17,27 +18,32 @@ pub async fn process_assets(
     let mut assets: Vec<Asset> = vec![];
     let mut max_score = f64::MIN;
     for asset in os_assets {
-        let trait_names = asset
+        let trait_list = asset
             .traits
             .clone()
             .unwrap_or_default()
             .into_iter()
             .filter(|t| t.trait_type.to_lowercase() != "serial")
+            .collect::<Vec<_>>();
+
+        let trait_names = trait_list
+            .iter()
             .map(|t| t.value.to_lowercase())
             .collect::<Vec<String>>();
 
         let mut rarity_score = 1f64;
-        asset
-            .traits
-            .clone()
-            .unwrap_or_default()
-            .iter()
-            .for_each(|t| {
-                let frac = t.trait_count.unwrap_or(collection.total_supply as u64) as f64
-                    / collection.total_supply as f64;
-                rarity_score *= frac;
-            });
-
+        for t in &trait_list {
+            if let Some(c) = t.trait_count {
+                rarity_score += c as f64;
+            }
+        }
+        let traits = trait_list.iter().map(|t| t.trait_count).flatten().count() as f64;
+        // case OS API bugs out again and returns no traits
+        if traits == 0f64 {
+            rarity_score = 0f64;
+        } else {
+            rarity_score = rarity_score / traits;
+        }
         if rarity_score > max_score {
             max_score = rarity_score
         }
@@ -57,11 +63,14 @@ pub async fn process_assets(
             image_url: asset.image_url,
             owner: asset.owner.address,
             traits: trait_names,
-            rarity_score,
+            rarity_score: rarity_score,
             unique_traits: unique_traits as i32,
-            unique_3_trait_combinations: 0i32,
-            unique_4_trait_combinations: 0i32,
-            unique_5_trait_combinations: 0i32,
+            traits_3_combination_overlap: 0i32,
+            traits_4_combination_overlap: 0i32,
+            traits_5_combination_overlap: 0i32,
+            traits_3_combination_overlap_ids: vec![],
+            traits_4_combination_overlap_ids: vec![],
+            traits_5_combination_overlap_ids: vec![],
         });
     }
     println!("base processing done");
@@ -92,53 +101,72 @@ fn compute_combinations(
 ) -> Result<Vec<Asset>> {
     let mut res = vec![];
     for mut asset in assets {
-        asset.rarity_score = max_score / asset.rarity_score;
-        let mut unique_3 = 0;
-        let mut unique_4 = 0;
-        let mut unique_5 = 0;
-        for vpair in asset.traits.iter().combinations(5) {
-            unique_5 += collection
-                .iter()
-                .filter(|a| a.token_id != asset.token_id)
-                .filter(|a| {
-                    a.traits.contains(vpair[0])
-                        && a.traits.contains(vpair[1])
-                        && a.traits.contains(vpair[2])
-                        && a.traits.contains(vpair[3])
-                        && a.traits.contains(vpair[4])
-                })
-                .count();
-        }
+        let mut unique_3 = HashSet::<i32>::new();
+        let mut unique_4 = HashSet::<i32>::new();
+        let mut unique_5 = HashSet::<i32>::new();
 
         for vpair in asset.traits.iter().combinations(3) {
-            unique_3 += collection
-                .iter()
-                .filter(|a| a.token_id != asset.token_id)
-                .filter(|a| {
-                    a.traits.contains(vpair[0])
-                        && a.traits.contains(vpair[1])
-                        && a.traits.contains(vpair[2])
-                })
-                .count();
+            unique_3.extend(
+                collection
+                    .iter()
+                    .filter(|a| a.token_id != asset.token_id)
+                    .filter(|a| {
+                        a.traits.contains(vpair[0])
+                            && a.traits.contains(vpair[1])
+                            && a.traits.contains(vpair[2])
+                    })
+                    .map(|a| a.token_id)
+                    .collect::<Vec<_>>(),
+            );
         }
 
         for vpair in asset.traits.iter().combinations(4) {
-            unique_4 += collection
-                .iter()
-                .filter(|a| a.token_id != asset.token_id)
-                .filter(|a| {
-                    a.traits.contains(vpair[0])
-                        && a.traits.contains(vpair[1])
-                        && a.traits.contains(vpair[2])
-                        && a.traits.contains(vpair[3])
-                })
-                .count();
+            unique_4.extend(
+                collection
+                    .iter()
+                    .filter(|a| a.token_id != asset.token_id)
+                    .filter(|a| {
+                        a.traits.contains(vpair[0])
+                            && a.traits.contains(vpair[1])
+                            && a.traits.contains(vpair[2])
+                            && a.traits.contains(vpair[3])
+                    })
+                    .map(|a| a.token_id)
+                    .collect::<Vec<_>>(),
+            );
         }
 
-        asset.unique_5_trait_combinations = unique_5 as i32;
-        asset.unique_3_trait_combinations = unique_3 as i32;
-        asset.unique_4_trait_combinations = unique_4 as i32;
+        for vpair in asset.traits.iter().combinations(5) {
+            unique_5.extend(
+                collection
+                    .iter()
+                    .filter(|a| a.token_id != asset.token_id)
+                    .filter(|a| {
+                        a.traits.contains(vpair[0])
+                            && a.traits.contains(vpair[1])
+                            && a.traits.contains(vpair[2])
+                            && a.traits.contains(vpair[3])
+                            && a.traits.contains(vpair[4])
+                    })
+                    .map(|a| a.token_id)
+                    .collect::<Vec<_>>(),
+            );
+        }
 
+        asset.traits_3_combination_overlap = unique_3.len() as i32;
+        asset.traits_4_combination_overlap = unique_4.len() as i32;
+        asset.traits_5_combination_overlap = unique_5.len() as i32;
+        asset.traits_3_combination_overlap_ids = unique_3.into_iter().collect::<Vec<_>>();
+        asset.traits_4_combination_overlap_ids = unique_4.into_iter().collect::<Vec<_>>();
+        asset.traits_5_combination_overlap_ids = unique_5.into_iter().collect::<Vec<_>>();
+
+        asset.rarity_score = if asset.rarity_score != 0f64 {
+            1f64 - (asset.rarity_score / max_score)
+        } else {
+            0f64
+        };
+
+        println!("{:?}, {:?}", asset.rarity_score, asset.token_id);
         res.push(asset.clone());
     }
 
@@ -164,7 +192,7 @@ mod tests {
                     value: String::from("black"),
                     display_type: None,
                     max_value: None,
-                    trait_count: Some(10),
+                    trait_count: Some(100),
                     order: None,
                 },
                 Trait {
@@ -172,7 +200,7 @@ mod tests {
                     value: String::from("illuminatus"),
                     display_type: None,
                     max_value: None,
-                    trait_count: Some(26),
+                    trait_count: Some(13),
                     order: None,
                 },
                 Trait {
@@ -232,15 +260,15 @@ mod tests {
                     value: String::from("Rainbow Suit"),
                     display_type: None,
                     max_value: None,
-                    trait_count: Some(9),
+                    trait_count: Some(18),
                     order: None,
                 },
                 Trait {
                     trait_type: String::from("familiar"),
-                    value: String::from("Ancient Dog"),
+                    value: String::from("Ancient dog"),
                     display_type: None,
                     max_value: None,
-                    trait_count: Some(9),
+                    trait_count: Some(18),
                     order: None,
                 },
                 Trait {
@@ -248,7 +276,59 @@ mod tests {
                     value: String::from("Rune of Infinity"),
                     display_type: None,
                     max_value: None,
-                    trait_count: Some(9),
+                    trait_count: Some(18),
+                    order: None,
+                },
+            ]),
+            owner: Owner {
+                address: String::from("addr"),
+            },
+        };
+
+        let asset3 = OpenseaAsset {
+            name: String::from("Test"),
+            token_id: 2u64,
+            image_url: String::from("Test"),
+            sell_orders: None,
+            traits: Some(vec![
+                Trait {
+                    trait_type: String::from("background"),
+                    value: String::from("red"),
+                    display_type: None,
+                    max_value: None,
+                    trait_count: Some(200),
+                    order: None,
+                },
+                Trait {
+                    trait_type: String::from("head"),
+                    value: String::from("great old one"),
+                    display_type: None,
+                    max_value: None,
+                    trait_count: Some(130),
+                    order: None,
+                },
+                Trait {
+                    trait_type: String::from("body"),
+                    value: String::from("Rainbow Suit"),
+                    display_type: None,
+                    max_value: None,
+                    trait_count: Some(90),
+                    order: None,
+                },
+                Trait {
+                    trait_type: String::from("familiar"),
+                    value: String::from("Ancient dog"),
+                    display_type: None,
+                    max_value: None,
+                    trait_count: Some(90),
+                    order: None,
+                },
+                Trait {
+                    trait_type: String::from("rune"),
+                    value: String::from("Rune of Infinity"),
+                    display_type: None,
+                    max_value: None,
+                    trait_count: Some(90),
                     order: None,
                 },
             ]),
@@ -258,9 +338,13 @@ mod tests {
         };
         let pool = establish_connection().await;
         let mut conn = pool.acquire().await.unwrap();
-        let a = process_assets(&mut conn, vec![asset1, asset2], "forgottenruneswizardscult")
-            .await
-            .unwrap();
+        let a = process_assets(
+            &mut conn,
+            vec![asset1, asset2, asset3],
+            "forgottenruneswizardscult",
+        )
+        .await
+        .unwrap();
         println!("{}", serde_json::to_string_pretty(&a).unwrap());
         assert!(!a.is_empty());
     }

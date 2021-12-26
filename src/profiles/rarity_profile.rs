@@ -9,9 +9,12 @@ pub struct RarityProfile {
     pub most_valued_trait: Option<String>,
     pub rarity_score: f64,
     pub unique_traits: i32,
-    pub unique_3_trait_combinations: i32,
-    pub unique_4_trait_combinations: i32,
-    pub unique_5_trait_combinations: i32,
+    pub traits_3_combination_overlap: i32,
+    pub traits_3_combination_overlap_ids: Vec<i32>,
+    pub traits_4_combination_overlap: i32,
+    pub traits_4_combination_overlap_ids: Vec<i32>,
+    pub traits_5_combination_overlap: i32,
+    pub traits_5_combination_overlap_ids: Vec<i32>,
 }
 impl RarityProfile {
     pub async fn make(
@@ -39,9 +42,12 @@ impl RarityProfile {
             most_valued_trait,
             rarity_score: asset.rarity_score,
             unique_traits: asset.unique_traits,
-            unique_3_trait_combinations: asset.unique_3_trait_combinations,
-            unique_4_trait_combinations: asset.unique_4_trait_combinations,
-            unique_5_trait_combinations: asset.unique_5_trait_combinations,
+            traits_3_combination_overlap: asset.traits_3_combination_overlap,
+            traits_4_combination_overlap: asset.traits_4_combination_overlap,
+            traits_5_combination_overlap: asset.traits_5_combination_overlap,
+            traits_3_combination_overlap_ids: asset.traits_3_combination_overlap_ids,
+            traits_4_combination_overlap_ids: asset.traits_4_combination_overlap_ids,
+            traits_5_combination_overlap_ids: asset.traits_5_combination_overlap_ids,
         })
     }
 }

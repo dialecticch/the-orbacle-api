@@ -18,12 +18,15 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
         traits,
         rarity_score,
         unique_traits,
-        unique_5_trait_combinations,
-        unique_3_trait_combinations,
-        unique_4_trait_combinations
+        traits_3_combination_overlap,
+        traits_4_combination_overlap,
+        traits_5_combination_overlap,
+        traits_3_combination_overlap_ids,
+        traits_4_combination_overlap_ids,
+        traits_5_combination_overlap_ids
        )
        values
-           ($1, $2, $3, $4,$5, $6, $7, $8, $9, $10, $11);
+           ($1, $2, $3, $4,$5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
        "#,
         asset.name,
         asset.collection_slug.to_lowercase(),
@@ -33,9 +36,12 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
         &asset.traits,
         asset.rarity_score,
         asset.unique_traits,
-        asset.unique_5_trait_combinations,
-        asset.unique_3_trait_combinations,
-        asset.unique_4_trait_combinations,
+        asset.traits_3_combination_overlap,
+        asset.traits_4_combination_overlap,
+        asset.traits_5_combination_overlap,
+        &asset.traits_3_combination_overlap_ids,
+        &asset.traits_4_combination_overlap_ids,
+        &asset.traits_5_combination_overlap_ids,
     )
     .execute(conn)
     .await

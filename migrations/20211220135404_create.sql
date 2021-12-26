@@ -5,11 +5,14 @@ CREATE TABLE ASSET (
     image_url VARCHAR NOT NULL,
     owner VARCHAR NOT NULL,
     traits VARCHAR[] NOT NULL,
-    rarity_score float NOT NULL,
+    rarity_score FLOAT NOT NULL,
     unique_traits INT NOT NULL,
-    unique_3_trait_combinations INT NOT NULL,
-    unique_4_trait_combinations INT NOT NULL,
-    unique_5_trait_combinations INT NOT NULL,
+    traits_3_combination_overlap INT NOT NULL,
+    traits_4_combination_overlap INT NOT NULL,
+    traits_5_combination_overlap INT NOT NULL,
+    traits_3_combination_overlap_ids INT[] NOT NULL,
+    traits_4_combination_overlap_ids INT[] NOT NULL,
+    traits_5_combination_overlap_ids INT[] NOT NULL,
     primary key (collection_slug, token_id)
 );
 
