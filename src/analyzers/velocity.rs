@@ -64,10 +64,10 @@ pub async fn get_avg_sale_frequency(
 pub async fn get_mvt_sale_frequency(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_id: i32,
     days_back: usize,
+    token_traits: Vec<(String, f64)>,
 ) -> Result<f64> {
-    let most_valuable_trait = get_most_valued_trait_floor(conn, collection_slug, token_id, 0.01)
+    let most_valuable_trait = get_most_valued_trait_floor(conn, collection_slug, token_traits)
         .await?
         .0;
     let frequency = get_sale_frequency_trait(

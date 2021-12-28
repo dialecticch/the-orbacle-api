@@ -1,6 +1,3 @@
-use super::{
-    liquidty_profile::LiquidityProfile, price_profile::PriceProfile, rarity_profile::RarityProfile,
-};
 use crate::analyzers::listings::*;
 use crate::storage::read::read_assets_for_owner;
 use crate::storage::read::{read_asset, read_collection};
@@ -8,7 +5,7 @@ use anyhow::Result;
 use sqlx::PgConnection;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
-pub struct TokenProfile {
+pub struct TraitProfile {
     pub opensea: String,
     pub name: String,
     pub owner: String,
@@ -17,17 +14,13 @@ pub struct TokenProfile {
     pub image_url: String,
     pub listing_price: Option<f64>,
     pub owner_tokens_in_collection: i64,
-    pub price_profile: PriceProfile,
-    pub liquidity_profile: LiquidityProfile,
-    pub rarity_profile: RarityProfile,
 }
 
-impl TokenProfile {
+impl TraitProfile {
     pub async fn make(
         conn: &mut PgConnection,
         collection_slug: &str,
         token_id: i32,
-        cutoff: i32,
     ) -> Result<Self> {
         log::info!("Getting asset");
         let asset = read_asset(conn, collection_slug, token_id).await?;
@@ -52,9 +45,6 @@ impl TokenProfile {
             owner_tokens_in_collection: read_assets_for_owner(conn, collection_slug, &asset.owner)
                 .await?
                 .unwrap_or_default(),
-            price_profile: PriceProfile::make(conn, collection_slug, token_id, cutoff).await?,
-            liquidity_profile: LiquidityProfile::make(conn, collection_slug, token_id).await?,
-            rarity_profile: RarityProfile::make(conn, collection_slug, token_id).await?,
         })
     }
 }

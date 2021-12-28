@@ -21,19 +21,20 @@ impl PriceProfile {
         conn: &mut PgConnection,
         collection_slug: &str,
         token_id: i32,
-        cutoff: i32,
+        token_traits: Vec<(String, f64)>,
     ) -> Result<Self> {
         log::info!("Getting collection_floor");
-        let collection_floor = get_collection_floor(collection_slug).await?;
+        let collection_floor = 0f64; //get_collection_floor(collection_slug).await?;
 
         log::info!("Getting most_rare_trait_floor");
-        let most_rare_trait_floor = get_rarest_trait_floor(conn, collection_slug, token_id)
-            .await?
-            .2;
+        let most_rare_trait_floor =
+            get_rarest_trait_floor(conn, collection_slug, token_traits.clone())
+                .await?
+                .2;
 
         log::info!("Getting most_valuable_trait_resp");
         let most_valuable_trait_resp =
-            get_most_valued_trait_floor(conn, collection_slug, token_id, 0.03).await?;
+            get_most_valued_trait_floor(conn, collection_slug, token_traits.clone()).await?;
 
         log::info!("Getting most_valued_trait_floor");
         let most_valued_trait = most_valuable_trait_resp.0;
@@ -41,8 +42,7 @@ impl PriceProfile {
 
         log::info!("Getting rarity_weighted_floor");
         let rarity_weighted_floor =
-            get_rarity_weighted_floor(conn, collection_slug, token_id, cutoff as f64 / 100f64)
-                .await?;
+            get_rarity_weighted_floor(conn, collection_slug, token_traits).await?;
 
         log::info!("Getting last_sale");
         let last_sale = get_last_sale_price(conn, collection_slug, token_id).await?;

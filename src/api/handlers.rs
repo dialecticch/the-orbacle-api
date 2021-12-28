@@ -1,5 +1,5 @@
 use super::errors::internal_error;
-use crate::profiles::token_profile::TokenProfile;
+use crate::profiles::token::token_profile::TokenProfile;
 use anyhow::Result;
 use rweb::*;
 use sqlx::PgPool;
@@ -33,7 +33,7 @@ pub async fn get_profile(
     println!("/get_profile/{}/{}", collection, token_id);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    TokenProfile::make(&mut conn, &collection.to_string(), token_id, 1)
+    TokenProfile::make(&mut conn, &collection.to_string(), token_id)
         .await
         .map(|r| r.into())
         .map_err(internal_error)

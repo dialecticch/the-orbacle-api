@@ -20,9 +20,10 @@ impl LiquidityProfile {
         conn: &mut PgConnection,
         collection_slug: &str,
         token_id: i32,
+        token_traits: Vec<(String, f64)>,
     ) -> Result<Self> {
         log::info!("Getting rarest_trait");
-        let rarest_trait = get_rarest_trait_floor(conn, collection_slug, token_id)
+        let rarest_trait = get_rarest_trait_floor(conn, collection_slug, token_traits.clone())
             .await?
             .0;
 
@@ -32,7 +33,7 @@ impl LiquidityProfile {
 
         log::info!("Getting most_valuable_trait_resp");
         let most_valuable_trait_resp =
-            get_most_valued_trait_floor(conn, collection_slug, token_id, 0.03).await?;
+            get_most_valued_trait_floor(conn, collection_slug, token_traits).await?;
 
         log::info!("Getting most_valued_trait_floor");
         let most_valued_trait = most_valuable_trait_resp.0;

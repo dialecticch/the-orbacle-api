@@ -4,7 +4,6 @@ use chrono::prelude::Utc;
 use sqlx::PgConnection;
 
 use super::listings::get_trait_listings;
-use super::rarities::get_trait_rarities;
 use super::sales::*;
 
 pub async fn get_trait_floor(
@@ -31,15 +30,8 @@ pub async fn get_collection_floor(collection_slug: &str) -> Result<f64> {
 pub async fn get_most_valued_trait_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_id: i32,
-    rarity_cap: f64,
+    token_traits: Vec<(String, f64)>,
 ) -> Result<(Option<String>, Option<f64>)> {
-    let token_traits = get_trait_rarities(conn, collection_slug, token_id)
-        .await?
-        .into_iter()
-        .filter(|(_, r)| r < &rarity_cap)
-        .collect::<Vec<_>>();
-
     let mut highest_floor = (String::default(), 0f64);
     for (trait_name, _) in token_traits {
         let trait_listings = get_trait_listings(conn, collection_slug, &trait_name).await?;
@@ -58,10 +50,8 @@ pub async fn get_most_valued_trait_floor(
 pub async fn get_rarest_trait_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_id: i32,
+    token_traits: Vec<(String, f64)>,
 ) -> Result<(String, Option<i32>, Option<f64>)> {
-    let token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
-
     let listings = get_trait_listings(conn, collection_slug, &token_traits[0].0).await?;
     if !listings.is_empty() {
         Ok((
@@ -77,17 +67,10 @@ pub async fn get_rarest_trait_floor(
 pub async fn get_rarity_weighted_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_id: i32,
-    rarity_cap: f64,
+    token_traits: Vec<(String, f64)>,
 ) -> Result<f64> {
-    let token_traits = get_trait_rarities(conn, collection_slug, token_id)
-        .await?
-        .into_iter()
-        .filter(|(_, r)| r < &rarity_cap)
-        .collect::<Vec<_>>();
-
     if token_traits.is_empty() {
-        return Ok(get_rarest_trait_floor(conn, collection_slug, token_id)
+        return Ok(get_rarest_trait_floor(conn, collection_slug, token_traits)
             .await?
             .2
             .unwrap_or_default());
@@ -99,6 +82,10 @@ pub async fn get_rarity_weighted_floor(
         if !trait_listings.is_empty() {
             floors.push((trait_listings[0].0, trait_listings[0].1, raritiy));
         }
+    }
+
+    if floors.is_empty() {
+        return Ok(0f64);
     }
 
     floors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
@@ -127,14 +114,12 @@ pub async fn get_last_sale_price(
 pub async fn get_most_valued_trait_last_sale_avg(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_id: i32,
-    rarity_cap: f64,
     nr: Option<usize>,
+    token_traits: Vec<(String, f64)>,
 ) -> Result<Option<f64>> {
-    let most_valuable_trait =
-        get_most_valued_trait_floor(conn, collection_slug, token_id, rarity_cap)
-            .await?
-            .0;
+    let most_valuable_trait = get_most_valued_trait_floor(conn, collection_slug, token_traits)
+        .await?
+        .0;
 
     let trait_sales = if most_valuable_trait.is_some() {
         get_average_trait_sales_nr(conn, collection_slug, &most_valuable_trait.unwrap(), nr).await?
@@ -181,14 +166,8 @@ pub async fn get_last_sale_relative_to_mvt_avg(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_id: i32,
-    rarity_cap: f64,
+    token_traits: Vec<(String, f64)>,
 ) -> Result<Option<f64>> {
-    let token_traits = get_trait_rarities(conn, collection_slug, token_id)
-        .await?
-        .into_iter()
-        .filter(|(_, r)| r < &rarity_cap)
-        .collect::<Vec<_>>();
-
     let mut highest_sale = 0f64;
     for (trait_name, _) in token_traits {
         let trait_sales =

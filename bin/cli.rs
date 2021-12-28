@@ -8,7 +8,7 @@ use local::storage::preprocess;
 use local::storage::write::*;
 use local::updater::{update_collection_listings, update_collection_sales};
 
-use local::profiles::token_profile::TokenProfile;
+use local::profiles::token::token_profile::TokenProfile;
 
 #[tokio::main]
 pub async fn main() {
@@ -67,9 +67,6 @@ pub async fn main() {
             params[1]
                 .parse::<i32>()
                 .expect("TOKEN_ID was not and number"),
-            params[2]
-                .parse::<i32>()
-                .expect("TOKEN_ID was not and number"),
         )
         .await
         .unwrap();
@@ -92,8 +89,6 @@ async fn store(collection_slug: &str) -> Result<()> {
     println!("  Stored traits stats!");
 
     println!("  Fetching assets...");
-
-    let size = collection.collection.stats.total_supply as usize;
 
     let req = AssetsRequest::new()
         .collection(collection_slug)

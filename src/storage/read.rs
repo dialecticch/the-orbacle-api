@@ -311,3 +311,31 @@ pub async fn read_latests_listing_for_collection(
     .await
     .map_err(|e| e.into())
 }
+
+pub async fn read_trait_floor_at_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    trait_name: &str,
+    ts: i32,
+) -> Result<Option<f64>> {
+    sqlx::query_scalar!(
+        r#"
+            select
+                distinct(price)
+            from
+            listing  
+            where collection_slug = $1 and token_id= any( select
+                token_id
+                from
+                    asset a     
+                where a.collection_slug = $1 and  $2 = any(a.traits)) and timestamp< $3
+            order by price asc
+        "#,
+        collection_slug,
+        trait_name,
+        ts
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
