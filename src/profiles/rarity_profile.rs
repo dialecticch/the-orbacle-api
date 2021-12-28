@@ -7,7 +7,6 @@ use sqlx::PgConnection;
 pub struct RarityProfile {
     pub rarest_trait: String,
     pub most_valued_trait: Option<String>,
-    pub rarity_score: f64,
     pub unique_traits: i32,
     pub traits_3_combination_overlap: i32,
     pub traits_3_combination_overlap_ids: Vec<i32>,
@@ -40,7 +39,6 @@ impl RarityProfile {
         Ok(Self {
             rarest_trait,
             most_valued_trait,
-            rarity_score: asset.rarity_score,
             unique_traits: asset.unique_traits,
             traits_3_combination_overlap: asset.traits_3_combination_overlap,
             traits_4_combination_overlap: asset.traits_4_combination_overlap,

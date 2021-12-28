@@ -16,7 +16,6 @@ pub async fn process_assets(
     println!("{:?}", collection.total_supply);
 
     let mut assets: Vec<Asset> = vec![];
-    let mut max_score = f64::MIN;
     for asset in os_assets {
         let trait_list = asset
             .traits
@@ -30,23 +29,6 @@ pub async fn process_assets(
             .iter()
             .map(|t| t.value.to_lowercase())
             .collect::<Vec<String>>();
-
-        let mut rarity_score = 1f64;
-        for t in &trait_list {
-            if let Some(c) = t.trait_count {
-                rarity_score += c as f64;
-            }
-        }
-        let traits = trait_list.iter().map(|t| t.trait_count).flatten().count() as f64;
-        // case OS API bugs out again and returns no traits
-        if traits == 0f64 {
-            rarity_score = 0f64;
-        } else {
-            rarity_score = rarity_score / traits;
-        }
-        if rarity_score > max_score {
-            max_score = rarity_score
-        }
 
         let unique_traits = asset
             .traits
@@ -63,7 +45,6 @@ pub async fn process_assets(
             image_url: asset.image_url,
             owner: asset.owner.address,
             traits: trait_names,
-            rarity_score: rarity_score,
             unique_traits: unique_traits as i32,
             traits_3_combination_overlap: 0i32,
             traits_4_combination_overlap: 0i32,
@@ -83,7 +64,7 @@ pub async fn process_assets(
         let collection = assets.clone();
         let list = c.to_vec();
         handlers.push(std::thread::spawn(move || {
-            compute_combinations(list.clone(), collection, max_score).unwrap()
+            compute_combinations(list.clone(), collection).unwrap()
         }))
     }
 
@@ -94,11 +75,7 @@ pub async fn process_assets(
     Ok(res)
 }
 
-fn compute_combinations(
-    assets: Vec<Asset>,
-    collection: Vec<Asset>,
-    max_score: f64,
-) -> Result<Vec<Asset>> {
+fn compute_combinations(assets: Vec<Asset>, collection: Vec<Asset>) -> Result<Vec<Asset>> {
     let mut res = vec![];
     for mut asset in assets {
         let mut unique_3 = HashSet::<i32>::new();
@@ -160,13 +137,6 @@ fn compute_combinations(
         asset.traits_4_combination_overlap_ids = unique_4.into_iter().collect::<Vec<_>>();
         asset.traits_5_combination_overlap_ids = unique_5.into_iter().collect::<Vec<_>>();
 
-        asset.rarity_score = if asset.rarity_score != 0f64 {
-            1f64 - (asset.rarity_score / max_score)
-        } else {
-            0f64
-        };
-
-        println!("{:?}, {:?}", asset.rarity_score, asset.token_id);
         res.push(asset.clone());
     }
 

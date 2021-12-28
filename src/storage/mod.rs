@@ -17,7 +17,6 @@ pub struct Asset {
     pub image_url: String,
     pub owner: String,
     pub traits: Vec<String>,
-    pub rarity_score: f64,
     pub unique_traits: i32,
     pub traits_3_combination_overlap: i32,
     pub traits_4_combination_overlap: i32,

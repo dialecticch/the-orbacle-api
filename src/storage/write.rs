@@ -16,7 +16,6 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
         image_url,
         owner,
         traits,
-        rarity_score,
         unique_traits,
         traits_3_combination_overlap,
         traits_4_combination_overlap,
@@ -26,7 +25,7 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
         traits_5_combination_overlap_ids
        )
        values
-           ($1, $2, $3, $4,$5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+           ($1, $2, $3, $4,$5, $6, $7, $8, $9, $10, $11, $12, $13);
        "#,
         asset.name,
         asset.collection_slug.to_lowercase(),
@@ -34,7 +33,6 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
         asset.image_url,
         asset.owner,
         &asset.traits,
-        asset.rarity_score,
         asset.unique_traits,
         asset.traits_3_combination_overlap,
         asset.traits_4_combination_overlap,
