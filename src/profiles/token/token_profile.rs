@@ -3,12 +3,11 @@ use super::{
 };
 use crate::analyzers::listings::*;
 use crate::analyzers::rarities::get_trait_rarities;
+use crate::storage::read::read_asset;
 use crate::storage::read::read_assets_for_owner;
-use crate::storage::read::{read_asset, read_collection};
+use crate::storage::Collection;
 use anyhow::Result;
 use sqlx::PgConnection;
-
-static RARITY_CAP: f64 = 0.03;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
 pub struct TokenProfile {
@@ -28,23 +27,22 @@ pub struct TokenProfile {
 impl TokenProfile {
     pub async fn make(
         conn: &mut PgConnection,
-        collection_slug: &str,
+        collection: Collection,
         token_id: i32,
     ) -> Result<Self> {
         log::info!("Getting asset");
-        let asset = read_asset(conn, collection_slug, token_id).await?;
+
+        let collection_slug = collection.slug;
+
+        let asset = read_asset(conn, &collection_slug, token_id).await?;
 
         log::info!("Getting collection_address");
-        let collection_address = read_collection(conn, collection_slug).await?.address;
+        let collection_address = collection.address;
 
         log::info!("Getting listing_price");
-        let listing_price = get_token_listings(conn, collection_slug, vec![token_id]).await?[0].1;
+        let listing_price = get_token_listings(conn, &collection_slug, vec![token_id]).await?[0].1;
 
-        let token_traits = get_trait_rarities(conn, collection_slug, token_id)
-            .await?
-            .into_iter()
-            .filter(|(_, r)| r < &RARITY_CAP)
-            .collect::<Vec<_>>();
+        let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
 
         Ok(Self {
             opensea: format!(
@@ -57,28 +55,31 @@ impl TokenProfile {
             token_id,
             image_url: asset.image_url,
             listing_price,
-            owner_tokens_in_collection: read_assets_for_owner(conn, collection_slug, &asset.owner)
+            owner_tokens_in_collection: read_assets_for_owner(conn, &collection_slug, &asset.owner)
                 .await?
                 .unwrap_or_default(),
             price_profile: PriceProfile::make(
                 conn,
-                collection_slug,
+                &collection_slug,
                 token_id,
                 token_traits.clone(),
+                collection.rarity_cutoff,
             )
             .await?,
             liquidity_profile: LiquidityProfile::make(
                 conn,
-                collection_slug,
+                &collection_slug,
                 token_id,
                 token_traits.clone(),
+                collection.rarity_cutoff,
             )
             .await?,
             rarity_profile: RarityProfile::make(
                 conn,
-                collection_slug,
+                &collection_slug,
                 token_id,
                 token_traits.clone(),
+                collection.rarity_cutoff,
             )
             .await?,
         })

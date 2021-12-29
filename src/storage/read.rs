@@ -24,6 +24,20 @@ pub async fn read_collection(conn: &mut PgConnection, slug: &str) -> Result<Coll
     .map_err(|e| e.into())
 }
 
+pub async fn read_all_collections(conn: &mut PgConnection) -> Result<Vec<String>> {
+    sqlx::query_scalar!(
+        r#"
+            select
+                slug 
+            from
+                collection
+        "#,
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 // ============ Trait ============
 pub async fn read_trait(
     conn: &mut PgConnection,
@@ -312,30 +326,31 @@ pub async fn read_latests_listing_for_collection(
     .map_err(|e| e.into())
 }
 
-pub async fn read_trait_floor_at_ts(
+pub async fn read_trait_listings_at_ts(
     conn: &mut PgConnection,
     collection_slug: &str,
     trait_name: &str,
     ts: i32,
-) -> Result<Option<f64>> {
-    sqlx::query_scalar!(
+) -> Result<Vec<Listing>> {
+    sqlx::query_as!(
+        Listing,
         r#"
             select
-                distinct(price)
+                *
             from
             listing  
-            where collection_slug = $1 and token_id= any( select
+            where collection_slug = $1 and token_id = any( select
                 token_id
                 from
                     asset a     
-                where a.collection_slug = $1 and  $2 = any(a.traits)) and timestamp< $3
-            order by price asc
+                where a.collection_slug = $1 and  $2 = any(a.traits)) and timestamp < $3
+            order by timestamp desc
         "#,
         collection_slug,
         trait_name,
         ts
     )
-    .fetch_one(&mut *conn)
+    .fetch_all(&mut *conn)
     .await
     .map_err(|e| e.into())
 }

@@ -13,7 +13,7 @@ path = "bin/read_test.rs"
 
 [[bin]]
 name = "fetch"
-path = "bin/fetch_profile.rs"
+path = "bin/fetch_for_wallet.rs"
 
 
 [[bin]]

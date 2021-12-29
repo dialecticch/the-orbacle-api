@@ -1,5 +1,4 @@
 use super::sales::*;
-use crate::analyzers::prices::get_most_valued_trait_floor;
 use crate::analyzers::rarities::*;
 use anyhow::Result;
 use chrono::prelude::Utc;
@@ -59,24 +58,4 @@ pub async fn get_avg_sale_frequency(
         cumulative_frequency += frequency as f64;
     }
     Ok(cumulative_frequency / token_traits.len() as f64)
-}
-
-pub async fn get_mvt_sale_frequency(
-    conn: &mut PgConnection,
-    collection_slug: &str,
-    days_back: usize,
-    token_traits: Vec<(String, f64)>,
-) -> Result<f64> {
-    let most_valuable_trait = get_most_valued_trait_floor(conn, collection_slug, token_traits)
-        .await?
-        .0;
-    let frequency = get_sale_frequency_trait(
-        conn,
-        collection_slug,
-        &most_valuable_trait.unwrap(),
-        days_back,
-    )
-    .await?;
-
-    Ok(frequency)
 }

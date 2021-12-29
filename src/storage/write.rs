@@ -1,7 +1,6 @@
 use super::Trait;
 use crate::opensea::types::{Collection, Event};
 use anyhow::Result;
-use chrono::prelude::Utc;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Acquire, PgConnection};
 
@@ -50,20 +49,65 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
 pub async fn write_collection(
     conn: &mut PgConnection,
     collection: &Collection,
+    rarity_cutoff: f64,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
        insert into collection(
             slug,
             address,
-            total_supply
+            total_supply,
+            rarity_cutoff,
+            floor_price
        )
        values
-           ($1, $2, $3);
+           ($1, $2, $3, $4, $5);
        "#,
         collection.slug.to_lowercase(),
         collection.primary_asset_contracts[0].address.to_lowercase(),
         collection.stats.total_supply as i32,
+        rarity_cutoff,
+        collection.stats.floor_price,
+    )
+    .execute(conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+pub async fn update_collection_floor(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    new_floor: f64,
+) -> Result<PgQueryResult> {
+    sqlx::query!(
+        r#"
+        update  collection
+            set
+            floor_price = $1
+        where slug = $2
+       "#,
+        new_floor,
+        collection_slug
+    )
+    .execute(conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+pub async fn update_collection_rarity_cutoff(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    rarity_cutoff: f64,
+) -> Result<PgQueryResult> {
+    sqlx::query!(
+        r#"
+        update collection
+            set
+            rarity_cutoff = $1
+        where slug= $2
+       "#,
+        rarity_cutoff,
+        collection_slug
     )
     .execute(conn)
     .await
@@ -154,6 +198,7 @@ pub async fn write_listing(
     collection_slug: &str,
     token_id: i32,
     price: Option<f64>,
+    timestamp: i32,
 ) -> Result<()> {
     sqlx::query!(
         r#"
@@ -169,7 +214,7 @@ pub async fn write_listing(
         collection_slug.to_lowercase(),
         token_id,
         price,
-        Utc::now().timestamp() as i32,
+        timestamp //Utc::now().timestamp() as i32,
     )
     .execute(conn)
     .await?;

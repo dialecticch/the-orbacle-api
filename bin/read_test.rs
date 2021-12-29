@@ -1,11 +1,12 @@
 use anyhow::Result;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 use local::analyzers::{prices::*, rarities::*, sales::*};
+use local::profiles::traits::get_daily_trait_floor;
 use local::storage::establish_connection;
 use local::storage::read::*;
 
 static COLLECTION: &str = "forgottenruneswizardscult";
-static TRAIT: &str = "flaming skull";
+static TRAIT: &str = "great old one";
 static TOKEN_ID: i32 = 777;
 
 #[tokio::main]
@@ -13,13 +14,13 @@ pub async fn main() -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
-    let c = read_collection(&mut conn, COLLECTION).await?;
+    // let c = read_collection(&mut conn, COLLECTION).await?;
 
-    println!("Collection: \n{:?}\n", c);
+    // println!("Collection: \n{:?}\n", c);
 
-    let t = read_trait(&mut conn, COLLECTION, TRAIT).await?;
+    // let t = read_trait(&mut conn, COLLECTION, TRAIT).await?;
 
-    println!("Trait: \n{:?}\n", t);
+    // println!("Trait: \n{:?}\n", t);
 
     // let assets_with_trait = read_assets_with_trait(&mut conn, COLLECTION, TRAIT)
     //     .await
@@ -27,13 +28,13 @@ pub async fn main() -> Result<()> {
 
     // println!("Assets with Trait: \n{:?}\n", &assets_with_trait.len());
 
-    let at = read_traits_for_asset(&mut conn, COLLECTION, TOKEN_ID).await?;
+    // let at = read_traits_for_asset(&mut conn, COLLECTION, TOKEN_ID).await?;
 
-    println!("Traits for Asset: \n{:?}\n", at);
+    // println!("Traits for Asset: \n{:?}\n", at);
 
-    let at = get_trait_rarities(&mut conn, COLLECTION, TOKEN_ID).await?;
+    // let at = get_trait_rarities(&mut conn, COLLECTION, TOKEN_ID).await?;
 
-    println!("Rarities for Asset: \n{:?}\n", at);
+    // println!("Rarities for Asset: \n{:?}\n", at);
 
     // let at = get_trait_listing(&mut conn, COLLECTION, &at[0].0).await?;
 
@@ -59,40 +60,44 @@ pub async fn main() -> Result<()> {
 
     // println!("Rarity weighted price for {}: \n{:?}\n", TOKEN_ID, at);
 
-    let at = get_trait_sales(&mut conn, COLLECTION, TRAIT).await?;
+    // let at = get_trait_sales(&mut conn, COLLECTION, TRAIT).await?;
 
-    println!("Sales for trait {}: \n{:?}\n", TRAIT, at);
+    // println!("Sales for trait {}: \n{:?}\n", TRAIT, at);
 
-    let at = get_average_trait_sales_nr(&mut conn, COLLECTION, TRAIT, Some(3)).await?;
+    // let at = get_average_trait_sales_nr(&mut conn, COLLECTION, TRAIT, Some(3)).await?;
 
-    println!("Avg for trait {}: \n{:?}\n", TRAIT, at);
+    // println!("Avg for trait {}: \n{:?}\n", TRAIT, at);
 
-    let time = NaiveDate::from_ymd(2021, 12, 21).and_hms(0, 0, 0);
+    // let time = NaiveDate::from_ymd(2021, 12, 21).and_hms(0, 0, 0);
 
-    let at = read_avg_price_collection_at_ts(&mut conn, COLLECTION, &time).await?;
+    // let at = read_avg_price_collection_at_ts(&mut conn, COLLECTION, &time).await?;
 
-    println!("Avg collection price at {}: \n{:?}\n", &time, at);
+    // println!("Avg collection price at {}: \n{:?}\n", &time, at);
 
-    let at = read_avg_price_trait_at_ts(&mut conn, COLLECTION, TRAIT, &time).await?;
+    // let at = read_avg_price_trait_at_ts(&mut conn, COLLECTION, TRAIT, &time).await?;
 
-    println!("Avg trait {} price at {}: \n{:?}\n", TRAIT, &time, at);
+    // println!("Avg trait {} price at {}: \n{:?}\n", TRAIT, &time, at);
 
-    let at = get_last_sale_relative_to_collection_avg(&mut conn, COLLECTION, 3477).await?;
+    // let at = get_last_sale_relative_to_collection_avg(&mut conn, COLLECTION, 3477).await?;
 
-    println!(
-        "Purchase Price Relative to Avg change for {}: \n{:?}\n",
-        3477, at
-    );
+    // println!(
+    //     "Purchase Price Relative to Avg change for {}: \n{:?}\n",
+    //     3477, at
+    // );
 
-    let at = get_last_sale_relative_to_trait_avg(&mut conn, COLLECTION, TRAIT, 3477).await?;
+    // let at = get_last_sale_relative_to_trait_avg(&mut conn, COLLECTION, TRAIT, 3477).await?;
 
-    println!(
-        "Purchase Price Relative to Avg change for {}: \n{:?}\n",
-        3477, at
-    );
-    let at = read_latests_listing_for_asset(&mut conn, COLLECTION, 3477).await?;
+    // println!(
+    //     "Purchase Price Relative to Avg change for {}: \n{:?}\n",
+    //     3477, at
+    // );
+    // let at = read_latests_listing_for_asset(&mut conn, COLLECTION, 3477).await?;
 
-    println!("Latest listings for {}: \n{:?}\n", 3477, at);
+    // println!("Latest listings for {}: \n{:?}\n", 3477, at);
+
+    let at = get_daily_trait_floor(&mut conn, COLLECTION, TRAIT).await?;
+
+    println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
 
     Ok(())
 }

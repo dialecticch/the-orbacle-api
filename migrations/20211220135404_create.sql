@@ -19,6 +19,8 @@ CREATE TABLE COLLECTION (
     slug VARCHAR NOT NULL,
     address VARCHAR NOT NULL,
     total_supply INT NOT NULL,
+    rarity_cutoff float not NULL,
+    floor_price float not null,
     primary key (slug)
 );
 

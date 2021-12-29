@@ -10,14 +10,14 @@ pub struct EmptyRequest {}
 pub struct CollectionResponse {
     pub collection: Collection,
 }
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Collection {
     pub primary_asset_contracts: Vec<AssetContract>,
     pub traits: HashMap<String, HashMap<String, u64>>,
     pub slug: String,
     pub stats: CollectionStats,
 }
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct CollectionStats {
     pub total_supply: f64,
     pub total_sales: f64,
@@ -30,6 +30,7 @@ pub struct SellOrder {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub current_price: f64,
     pub payment_token: String,
+    pub created_date: NaiveDateTime,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -47,7 +48,7 @@ pub struct Trait {
     pub order: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum AssetContractType {
     #[serde(rename = "fungible")]
     Fungible,
@@ -57,14 +58,14 @@ pub enum AssetContractType {
     SemiFungible,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum SchemaName {
     ERC721,
     ERC1155,
     CRYPTOPUNKS,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct AssetContract {
     pub address: String,
     asset_contract_type: AssetContractType,
@@ -91,7 +92,7 @@ pub struct AssetContract {
     payout_address: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct EmbeddedAsset {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub token_id: u64,
@@ -240,7 +241,7 @@ impl Default for AssetsRequest {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Event {
     pub asset: Option<EmbeddedAsset>,
     pub total_price: Option<String>,

@@ -1,10 +1,10 @@
-use crate::opensea::OpenseaAPIClient;
 use anyhow::Result;
 use chrono::prelude::Utc;
 use sqlx::PgConnection;
 
 use super::listings::get_trait_listings;
 use super::sales::*;
+use crate::storage::read::read_collection;
 
 pub async fn get_trait_floor(
     conn: &mut PgConnection,
@@ -20,18 +20,23 @@ pub async fn get_trait_floor(
     }
 }
 
-pub async fn get_collection_floor(collection_slug: &str) -> Result<f64> {
-    let client = OpenseaAPIClient::new(1);
-    let collection = client.get_collection(collection_slug).await?;
+pub async fn get_collection_floor(conn: &mut PgConnection, collection_slug: &str) -> Result<f64> {
+    let collection = read_collection(conn, collection_slug).await?;
 
-    Ok(collection.collection.stats.floor_price)
+    Ok(collection.floor_price)
 }
 
 pub async fn get_most_valued_trait_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_traits: Vec<(String, f64)>,
+    cutoff: f64,
 ) -> Result<(Option<String>, Option<f64>)> {
+    let token_traits = token_traits
+        .into_iter()
+        .filter(|t| t.1 < cutoff)
+        .collect::<Vec<_>>();
+
     let mut highest_floor = (String::default(), 0f64);
     for (trait_name, _) in token_traits {
         let trait_listings = get_trait_listings(conn, collection_slug, &trait_name).await?;
@@ -52,6 +57,13 @@ pub async fn get_rarest_trait_floor(
     collection_slug: &str,
     token_traits: Vec<(String, f64)>,
 ) -> Result<(String, Option<i32>, Option<f64>)> {
+    let mut token_traits = token_traits.clone();
+    token_traits.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+    if token_traits.is_empty() {
+        return Ok((String::default(), None, None));
+    }
+
     let listings = get_trait_listings(conn, collection_slug, &token_traits[0].0).await?;
     if !listings.is_empty() {
         Ok((
@@ -67,10 +79,17 @@ pub async fn get_rarest_trait_floor(
 pub async fn get_rarity_weighted_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
-    token_traits: Vec<(String, f64)>,
+    traits: Vec<(String, f64)>,
+    cutoff: f64,
 ) -> Result<f64> {
+    let token_traits = traits
+        .clone()
+        .into_iter()
+        .filter(|t| t.1 < (cutoff / 3f64))
+        .collect::<Vec<_>>();
+
     if token_traits.is_empty() {
-        return Ok(get_rarest_trait_floor(conn, collection_slug, token_traits)
+        return Ok(get_rarest_trait_floor(conn, collection_slug, traits)
             .await?
             .2
             .unwrap_or_default());
@@ -116,10 +135,12 @@ pub async fn get_most_valued_trait_last_sale_avg(
     collection_slug: &str,
     nr: Option<usize>,
     token_traits: Vec<(String, f64)>,
+    cutoff: f64,
 ) -> Result<Option<f64>> {
-    let most_valuable_trait = get_most_valued_trait_floor(conn, collection_slug, token_traits)
-        .await?
-        .0;
+    let most_valuable_trait =
+        get_most_valued_trait_floor(conn, collection_slug, token_traits, cutoff)
+            .await?
+            .0;
 
     let trait_sales = if most_valuable_trait.is_some() {
         get_average_trait_sales_nr(conn, collection_slug, &most_valuable_trait.unwrap(), nr).await?

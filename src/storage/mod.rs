@@ -31,6 +31,8 @@ pub struct Collection {
     pub slug: String,
     pub address: String,
     pub total_supply: i32,
+    pub floor_price: f64,
+    pub rarity_cutoff: f64,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

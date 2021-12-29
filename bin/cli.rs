@@ -1,12 +1,12 @@
 use anyhow::Result;
+use chrono::Utc;
 use clap::{App, Arg};
-
 use local::opensea::types::{AssetsRequest, EventsRequest};
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::preprocess;
+use local::storage::read::read_collection;
 use local::storage::write::*;
-use local::updater::{update_collection_listings, update_collection_sales};
 
 use local::profiles::token::token_profile::TokenProfile;
 
@@ -20,6 +20,7 @@ pub async fn main() {
                 .short("-s")
                 .long("store")
                 .value_name("COLLECTION")
+                .value_name("CUTOFF")
                 .help("Stores collection data")
                 .takes_value(true),
         )
@@ -38,20 +39,37 @@ pub async fn main() {
                 .short("-u")
                 .long("update")
                 .value_name("COLLECTION")
-                .help("update listing data")
+                .value_name("CUTOFF")
+                .help("update cutoff")
                 .takes_value(true),
         )
         .get_matches();
 
-    if let Some(c) = matches.value_of("store") {
-        store(c).await.unwrap();
+    if let Some(c) = matches.values_of("store") {
+        let params = c.into_iter().collect::<Vec<_>>();
+        store(
+            params[0],
+            params[1]
+                .parse::<f64>()
+                .expect("TOKEN_ID was not and float"),
+        )
+        .await
+        .unwrap();
     }
 
-    if let Some(c) = matches.value_of("update") {
+    if let Some(c) = matches.values_of("update") {
         let pool = establish_connection().await;
         let mut conn = pool.acquire().await.unwrap();
-        update_collection_listings(&mut conn, c).await.unwrap();
-        update_collection_sales(&mut conn, c).await.unwrap();
+        let params = c.into_iter().collect::<Vec<_>>();
+        update_collection_rarity_cutoff(
+            &mut conn,
+            params[0],
+            params[1]
+                .parse::<f64>()
+                .expect("TOKEN_ID was not and float"),
+        )
+        .await
+        .unwrap();
     }
 
     if let Some(c) = matches.values_of("fetch") {
@@ -61,9 +79,11 @@ pub async fn main() {
 
         println!("Building Asset Profile...");
 
+        let collection = read_collection(&mut conn, &params[0]).await.unwrap();
+
         let profile = TokenProfile::make(
             &mut conn,
-            params[0],
+            collection,
             params[1]
                 .parse::<i32>()
                 .expect("TOKEN_ID was not and number"),
@@ -75,14 +95,14 @@ pub async fn main() {
     }
 }
 
-async fn store(collection_slug: &str) -> Result<()> {
+async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
-    let client = OpenseaAPIClient::new(2);
+    let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(collection_slug).await?;
 
-    write_collection(&mut conn, &collection.collection).await?;
+    write_collection(&mut conn, &collection.collection, rarity_cutoff).await?;
     println!("  Stored collection stats!");
 
     write_traits(&mut conn, &collection.collection).await?;
@@ -97,7 +117,7 @@ async fn store(collection_slug: &str) -> Result<()> {
 
     let all_assets = client.get_assets(req).await?;
 
-    println!("  Storing assets...");
+    println!("  Storing {} assets...", all_assets.len());
 
     let processed =
         preprocess::process_assets(&mut conn, all_assets.clone(), collection_slug).await?;
@@ -117,13 +137,20 @@ async fn store(collection_slug: &str) -> Result<()> {
                 collection_slug,
                 a.token_id as i32,
                 Some(a.sell_orders.clone().unwrap()[0].current_price),
+                a.sell_orders.clone().unwrap()[0].created_date.timestamp() as i32,
             )
             .await
             .unwrap();
         } else {
-            write_listing(&mut conn, collection_slug, a.token_id as i32, None)
-                .await
-                .unwrap();
+            write_listing(
+                &mut conn,
+                collection_slug,
+                a.token_id as i32,
+                None,
+                Utc::now().timestamp() as i32,
+            )
+            .await
+            .unwrap();
         }
     }
     println!("  Stored {} Listings!", all_assets.len());
