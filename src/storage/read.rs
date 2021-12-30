@@ -326,6 +326,29 @@ pub async fn read_latests_listing_for_collection(
     .map_err(|e| e.into())
 }
 
+pub async fn read_listing_update_type_count_after_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    update_type: &str,
+    timestamp: &NaiveDateTime,
+) -> Result<Option<i64>> {
+    sqlx::query_scalar!(
+        r#"
+            select
+                count(distinct(token_id))
+            from
+                listing
+            where collection_slug = $1 and update_type = $2 and timestamp > $3
+        "#,
+        collection_slug,
+        update_type,
+        timestamp.timestamp() as i32,
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 pub async fn read_trait_listings_at_ts(
     conn: &mut PgConnection,
     collection_slug: &str,

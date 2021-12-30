@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{NaiveDate, Utc};
+use chrono::{Duration, NaiveDate, Utc};
 use local::analyzers::{prices::*, rarities::*, sales::*};
 use local::profiles::traits::get_daily_trait_floor;
 use local::storage::establish_connection;
@@ -95,7 +95,17 @@ pub async fn main() -> Result<()> {
 
     // println!("Latest listings for {}: \n{:?}\n", 3477, at);
 
-    let at = get_daily_trait_floor(&mut conn, COLLECTION, TRAIT).await?;
+    // let at = get_daily_trait_floor(&mut conn, COLLECTION, TRAIT).await?;
+
+    // println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
+
+    let at = read_listing_update_type_count_after_ts(
+        &mut conn,
+        COLLECTION,
+        "cancelled",
+        &(Utc::now() - Duration::days(7)).naive_utc(),
+    )
+    .await?;
 
     println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
 

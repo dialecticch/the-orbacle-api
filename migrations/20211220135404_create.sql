@@ -45,6 +45,7 @@ CREATE TABLE SALE (
 
 CREATE TABLE LISTING (
     collection_slug VARCHAR NOT NULL,
+    update_type VARCHAR NOT NULL,
     token_id int NOT NULL,
     price float,
     timestamp INT NOT NULL,

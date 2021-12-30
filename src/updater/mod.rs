@@ -26,7 +26,7 @@ pub async fn fetch_collection_listings(
         .build();
 
     let cancelled = client.get_events(req).await.unwrap();
-    log::info!("{} Cancelled Listings", cancelled.len());
+    println!("{} Cancelled Listings", cancelled.len());
 
     for event in cancelled {
         if let None = event.asset {
@@ -35,6 +35,7 @@ pub async fn fetch_collection_listings(
         if let Err(e) = write_listing(
             conn,
             collection_slug,
+            "cancelled",
             event.clone().asset.unwrap().token_id as i32,
             None,
             event.created_date.timestamp() as i32,
@@ -61,6 +62,7 @@ pub async fn fetch_collection_listings(
         if let Err(e) = write_listing(
             conn,
             collection_slug,
+            "successful",
             event.clone().asset.unwrap().token_id as i32,
             None,
             event.created_date.timestamp() as i32,
@@ -78,7 +80,7 @@ pub async fn fetch_collection_listings(
         .build();
 
     let created = client.get_events(req).await.unwrap();
-    log::info!("{} Created Listings", created.len());
+    println!("{} Created Listings", created.len());
 
     for event in created {
         if let None = event.asset {
@@ -87,6 +89,7 @@ pub async fn fetch_collection_listings(
         if let Err(e) = write_listing(
             conn,
             collection_slug,
+            "created",
             event.clone().asset.unwrap().token_id as i32,
             Some(event.clone().ending_price.unwrap().parse::<f64>().unwrap()),
             event.created_date.timestamp() as i32,
@@ -103,20 +106,27 @@ pub async fn fetch_collection_listings(
 pub async fn fetch_collection_sales(
     conn: &mut PgConnection,
     collection_slug: &str,
-    occurred_after: &NaiveDateTime,
+    occurred_after: Option<NaiveDateTime>,
 ) -> Result<()> {
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
     let client = OpenseaAPIClient::new(3);
 
-    let req = EventsRequest::new()
-        .asset_contract_address(&collection.address)
-        .event_type("successful")
-        .occurred_after(&occurred_after.to_string())
-        .build();
+    let req = match occurred_after {
+        Some(t) => EventsRequest::new()
+            .asset_contract_address(&collection.address)
+            .event_type("successful")
+            .occurred_after(&t.to_string())
+            .build(),
+        None => EventsRequest::new()
+            .asset_contract_address(&collection.address)
+            .event_type("successful")
+            .expected(10000)
+            .build(),
+    };
 
     let sales = client.get_events(req).await.unwrap();
-    log::info!("{} New Sales", sales.len());
+    println!("{} New Sales", sales.len());
     for e in &sales {
         write_sale(conn, e, collection_slug)
             .await

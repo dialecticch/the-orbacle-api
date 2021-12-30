@@ -46,6 +46,7 @@ pub struct SaleEvent {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Listing {
     pub collection_slug: String,
+    pub update_type: String,
     pub token_id: i32,
     pub timestamp: i32,
     pub price: Option<f64>,

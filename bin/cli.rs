@@ -1,12 +1,13 @@
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use clap::{App, Arg};
-use local::opensea::types::{AssetsRequest, EventsRequest};
+use local::opensea::types::AssetsRequest;
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::preprocess;
 use local::storage::read::read_collection;
 use local::storage::write::*;
+use local::updater::*;
 
 use local::profiles::token::token_profile::TokenProfile;
 
@@ -135,6 +136,7 @@ async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
             write_listing(
                 &mut conn,
                 collection_slug,
+                "sell_order",
                 a.token_id as i32,
                 Some(a.sell_orders.clone().unwrap()[0].current_price),
                 a.sell_orders.clone().unwrap()[0].created_date.timestamp() as i32,
@@ -145,6 +147,7 @@ async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
             write_listing(
                 &mut conn,
                 collection_slug,
+                "sell_order",
                 a.token_id as i32,
                 None,
                 Utc::now().timestamp() as i32,
@@ -157,24 +160,19 @@ async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
 
     println!("  Fetching events...");
 
-    let client = OpenseaAPIClient::new(1);
+    let now = Utc::now();
 
-    let req = EventsRequest::new()
-        .asset_contract_address(&collection.collection.primary_asset_contracts[0].address)
-        .event_type("successful")
-        .expected(usize::min(
-            collection.collection.stats.total_sales as usize,
-            10000,
-        ))
-        .build();
+    fetch_collection_listings(
+        &mut conn,
+        &collection_slug,
+        &(now - Duration::days(14)).naive_utc(),
+    )
+    .await
+    .unwrap();
 
-    let all_events = client.get_events(req).await?;
-    for e in &all_events {
-        write_sale(&mut conn, e, collection_slug)
-            .await
-            .unwrap_or_default();
-    }
-    println!("Stored {} events!", all_events.len());
+    fetch_collection_sales(&mut conn, &collection_slug, None)
+        .await
+        .unwrap();
 
     Ok(())
 }

@@ -196,6 +196,7 @@ pub async fn write_sale(
 pub async fn write_listing(
     conn: &mut PgConnection,
     collection_slug: &str,
+    update_type: &str,
     token_id: i32,
     price: Option<f64>,
     timestamp: i32,
@@ -206,15 +207,17 @@ pub async fn write_listing(
         collection_slug,
         token_id,
         price,
-        timestamp
+        timestamp,
+        update_type
        )
        values
-           ($1, $2, $3, $4);
+           ($1, $2, $3, $4, $5);
        "#,
         collection_slug.to_lowercase(),
         token_id,
         price,
-        timestamp //Utc::now().timestamp() as i32,
+        timestamp, //Utc::now().timestamp() as i32,
+        update_type
     )
     .execute(conn)
     .await?;
