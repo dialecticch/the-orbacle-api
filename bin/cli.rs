@@ -103,17 +103,21 @@ async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(collection_slug).await?;
 
-    write_collection(&mut conn, &collection.collection, rarity_cutoff).await?;
+    write_collection(&mut conn, &collection.collection, rarity_cutoff)
+        .await
+        .unwrap_or_default();
     println!("  Stored collection stats!");
 
-    write_traits(&mut conn, &collection.collection).await?;
+    write_traits(&mut conn, &collection.collection)
+        .await
+        .unwrap_or_default();
     println!("  Stored traits stats!");
 
     println!("  Fetching assets...");
 
     let req = AssetsRequest::new()
         .collection(collection_slug)
-        .expected(10000)
+        .expected(1000)
         .build();
 
     let all_assets = client.get_assets(req).await?;

@@ -17,7 +17,7 @@ pub async fn fetch_collection_listings(
 
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
-    let client = OpenseaAPIClient::new(3);
+    let client = OpenseaAPIClient::new(1);
 
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
@@ -110,7 +110,7 @@ pub async fn fetch_collection_sales(
 ) -> Result<()> {
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
-    let client = OpenseaAPIClient::new(3);
+    let client = OpenseaAPIClient::new(1);
 
     let req = match occurred_after {
         Some(t) => EventsRequest::new()
@@ -121,7 +121,7 @@ pub async fn fetch_collection_sales(
         None => EventsRequest::new()
             .asset_contract_address(&collection.address)
             .event_type("successful")
-            .expected(10000)
+            .expected(1000)
             .build(),
     };
 
