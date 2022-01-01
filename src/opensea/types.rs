@@ -15,6 +15,7 @@ pub struct Collection {
     pub primary_asset_contracts: Vec<AssetContract>,
     pub traits: HashMap<String, HashMap<String, u64>>,
     pub slug: String,
+    pub banner_image_url: String,
     pub stats: CollectionStats,
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -22,6 +23,19 @@ pub struct CollectionStats {
     pub total_supply: f64,
     pub total_sales: f64,
     pub floor_price: f64,
+
+    #[serde(rename = "one_day_volume")]
+    pub daily_volume: f64,
+    #[serde(rename = "one_day_sales")]
+    pub daily_sales: f64,
+    #[serde(rename = "one_day_average_price")]
+    pub daily_avg_price: f64,
+    #[serde(rename = "seven_day_average_price")]
+    pub weekly_avg_price: f64,
+    #[serde(rename = "thirty_day_average_price")]
+    pub monthly_avg_price: f64,
+    #[serde(rename = "num_owners")]
+    pub nr_owners: f64,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -127,7 +141,7 @@ pub struct AssetStub {
     pub token_id: u64,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct PaymentToken {
     id: u64,
     pub symbol: String,
@@ -247,6 +261,7 @@ pub struct Event {
     pub total_price: Option<String>,
     pub ending_price: Option<String>,
     pub created_date: NaiveDateTime,
+    pub payment_token: PaymentToken,
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct EventsResponse {

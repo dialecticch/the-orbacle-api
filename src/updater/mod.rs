@@ -29,7 +29,7 @@ pub async fn fetch_collection_listings(
     println!("{} Cancelled Listings", cancelled.len());
 
     for event in cancelled {
-        if let None = event.asset {
+        if event.asset.is_none() {
             continue;
         }
         if let Err(e) = write_listing(
@@ -55,7 +55,7 @@ pub async fn fetch_collection_listings(
     let filled = client.get_events(req).await.unwrap();
     log::info!("{} Filled Listings", filled.len());
     for event in filled {
-        if let None = event.asset {
+        if event.asset.is_none() {
             continue;
         }
 
@@ -83,7 +83,7 @@ pub async fn fetch_collection_listings(
     println!("{} Created Listings", created.len());
 
     for event in created {
-        if let None = event.asset {
+        if event.asset.is_none() {
             continue;
         }
         if let Err(e) = write_listing(
@@ -121,16 +121,18 @@ pub async fn fetch_collection_sales(
         None => EventsRequest::new()
             .asset_contract_address(&collection.address)
             .event_type("successful")
-            .expected(1000)
+            .expected(10000)
             .build(),
     };
 
     let sales = client.get_events(req).await.unwrap();
     println!("{} New Sales", sales.len());
     for e in &sales {
-        write_sale(conn, e, collection_slug)
-            .await
-            .unwrap_or_default();
+        if e.payment_token.symbol == "ETH" {
+            write_sale(conn, e, collection_slug)
+                .await
+                .unwrap_or_default();
+        }
     }
 
     Ok(())

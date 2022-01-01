@@ -3,3 +3,4 @@ pub mod prices;
 pub mod rarities;
 pub mod sales;
 pub mod velocity;
+pub mod wallet;

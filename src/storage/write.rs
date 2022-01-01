@@ -50,6 +50,7 @@ pub async fn write_collection(
     conn: &mut PgConnection,
     collection: &Collection,
     rarity_cutoff: f64,
+    avg_trait_rarity: f64,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
@@ -58,16 +59,32 @@ pub async fn write_collection(
             address,
             total_supply,
             rarity_cutoff,
-            floor_price
+            floor_price,
+            avg_trait_rarity,
+            banner_image_url,
+            daily_volume,
+            daily_sales,
+            daily_avg_price,
+            weekly_avg_price,
+            monthly_avg_price,
+            nr_owners
        )
        values
-           ($1, $2, $3, $4, $5);
+           ($1, $2, $3, $4, $5,$6, $7, $8, $9, $10, $11, $12, $13);
        "#,
         collection.slug.to_lowercase(),
         collection.primary_asset_contracts[0].address.to_lowercase(),
         collection.stats.total_supply as i32,
         rarity_cutoff,
         collection.stats.floor_price,
+        avg_trait_rarity,
+        collection.banner_image_url,
+        collection.stats.daily_volume,
+        collection.stats.daily_sales,
+        collection.stats.daily_avg_price,
+        collection.stats.weekly_avg_price,
+        collection.stats.monthly_avg_price,
+        collection.stats.nr_owners,
     )
     .execute(conn)
     .await

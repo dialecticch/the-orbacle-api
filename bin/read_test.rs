@@ -1,13 +1,14 @@
 use anyhow::Result;
-use chrono::{Duration, NaiveDate, Utc};
-use local::analyzers::{prices::*, rarities::*, sales::*};
-use local::profiles::traits::get_daily_trait_floor;
+use chrono::Utc;
+//use chrono{Duration, NaiveDate}
+// use local::analyzers::{prices::*, rarities::*, sales::*};
+// use local::profiles::traits::get_daily_trait_floor;
 use local::storage::establish_connection;
 use local::storage::read::*;
 
 static COLLECTION: &str = "forgottenruneswizardscult";
-static TRAIT: &str = "great old one";
-static TOKEN_ID: i32 = 777;
+// static TRAIT: &str = "great old one";
+// static TOKEN_ID: i32 = 777;
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -99,15 +100,24 @@ pub async fn main() -> Result<()> {
 
     // println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
 
-    let at = read_listing_update_type_count_after_ts(
-        &mut conn,
-        COLLECTION,
-        "cancelled",
-        &(Utc::now() - Duration::days(7)).naive_utc(),
-    )
-    .await?;
+    // let at = read_listing_update_type_count_after_ts(
+    //     &mut conn,
+    //     COLLECTION,
+    //     "cancelled",
+    //     &(Utc::now() - Duration::days(7)).naive_utc(),
+    // )
+    // .await?;
 
-    println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
+    // println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
+
+    let nr_listed_now =
+        read_nr_listed_for_collection_at_ts(&mut conn, COLLECTION, &Utc::now().naive_utc()).await?;
+
+    println!("nr_listed_now: {:?}", nr_listed_now);
+
+    let highest_sale = read_highest_sale_for_collection(&mut conn, COLLECTION).await?;
+
+    println!("highest_sale: {:?}", highest_sale);
 
     Ok(())
 }

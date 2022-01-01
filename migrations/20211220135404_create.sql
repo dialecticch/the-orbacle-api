@@ -18,9 +18,17 @@ CREATE TABLE ASSET (
 CREATE TABLE COLLECTION (
     slug VARCHAR NOT NULL,
     address VARCHAR NOT NULL,
+    banner_image_url VARCHAR NOT NULL,
     total_supply INT NOT NULL,
     rarity_cutoff float not NULL,
     floor_price float not null,
+    daily_volume float not null,
+    daily_sales float not null,
+    daily_avg_price float not null,
+    weekly_avg_price float not null,
+    monthly_avg_price float not null,
+    nr_owners float not null,
+    avg_trait_rarity float not null,
     primary key (slug)
 );
 

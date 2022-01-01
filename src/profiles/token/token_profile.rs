@@ -1,5 +1,6 @@
 use super::{
-    liquidty_profile::LiquidityProfile, price_profile::PriceProfile, rarity_profile::RarityProfile,
+    collection_profile::CollectionProfile, liquidty_profile::LiquidityProfile,
+    price_profile::PriceProfile, rarity_profile::RarityProfile,
 };
 use crate::analyzers::listings::*;
 use crate::analyzers::rarities::get_trait_rarities;
@@ -19,6 +20,7 @@ pub struct TokenProfile {
     pub image_url: String,
     pub listing_price: Option<f64>,
     pub owner_tokens_in_collection: i64,
+    pub collection_profile: CollectionProfile,
     pub price_profile: PriceProfile,
     pub liquidity_profile: LiquidityProfile,
     pub rarity_profile: RarityProfile,
@@ -66,6 +68,7 @@ impl TokenProfile {
                 collection.rarity_cutoff,
             )
             .await?,
+            collection_profile: CollectionProfile::make(conn, &collection_slug).await?,
             liquidity_profile: LiquidityProfile::make(
                 conn,
                 &collection_slug,

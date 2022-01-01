@@ -1,6 +1,7 @@
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use clap::{App, Arg};
+use local::analyzers::rarities::get_collection_avg_trait_rarity;
 use local::opensea::types::AssetsRequest;
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
@@ -22,6 +23,7 @@ pub async fn main() {
                 .long("store")
                 .value_name("COLLECTION")
                 .value_name("CUTOFF")
+                .value_name("TOT_SUPPLY")
                 .help("Stores collection data")
                 .takes_value(true),
         )
@@ -52,7 +54,10 @@ pub async fn main() {
             params[0],
             params[1]
                 .parse::<f64>()
-                .expect("TOKEN_ID was not and float"),
+                .expect("CUTOFT was not and float (3% -> 0.03)"),
+            params[2]
+                .parse::<usize>()
+                .expect("TOT_SUPPLY was not and number"),
         )
         .await
         .unwrap();
@@ -80,7 +85,7 @@ pub async fn main() {
 
         println!("Building Asset Profile...");
 
-        let collection = read_collection(&mut conn, &params[0]).await.unwrap();
+        let collection = read_collection(&mut conn, params[0]).await.unwrap();
 
         let profile = TokenProfile::make(
             &mut conn,
@@ -96,16 +101,23 @@ pub async fn main() {
     }
 }
 
-async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
+async fn store(collection_slug: &str, rarity_cutoff: f64, total_supply: usize) -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(collection_slug).await?;
 
-    write_collection(&mut conn, &collection.collection, rarity_cutoff)
-        .await
-        .unwrap_or_default();
+    let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&collection.collection)?;
+
+    write_collection(
+        &mut conn,
+        &collection.collection,
+        rarity_cutoff,
+        collection_avg_trait_rarity,
+    )
+    .await
+    .unwrap_or_default();
     println!("  Stored collection stats!");
 
     write_traits(&mut conn, &collection.collection)
@@ -117,7 +129,7 @@ async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
 
     let req = AssetsRequest::new()
         .collection(collection_slug)
-        .expected(1000)
+        .expected(total_supply)
         .build();
 
     let all_assets = client.get_assets(req).await?;
@@ -168,13 +180,13 @@ async fn store(collection_slug: &str, rarity_cutoff: f64) -> Result<()> {
 
     fetch_collection_listings(
         &mut conn,
-        &collection_slug,
+        collection_slug,
         &(now - Duration::days(14)).naive_utc(),
     )
     .await
     .unwrap();
 
-    fetch_collection_sales(&mut conn, &collection_slug, None)
+    fetch_collection_sales(&mut conn, collection_slug, None)
         .await
         .unwrap();
 

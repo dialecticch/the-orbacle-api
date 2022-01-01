@@ -33,6 +33,14 @@ pub struct Collection {
     pub total_supply: i32,
     pub floor_price: f64,
     pub rarity_cutoff: f64,
+    pub banner_image_url: String,
+    pub daily_volume: f64,
+    pub daily_sales: f64,
+    pub daily_avg_price: f64,
+    pub weekly_avg_price: f64,
+    pub monthly_avg_price: f64,
+    pub nr_owners: f64,
+    pub avg_trait_rarity: f64,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

@@ -1,7 +1,9 @@
 use super::errors::internal_error;
 use crate::analyzers::rarities::get_trait_rarities;
+use crate::profiles::token::collection_profile::CollectionProfile;
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::profiles::token::token_profile::TokenProfile;
+use crate::profiles::token::wallet_profile::WalletProfile;
 use crate::storage::read::read_collection;
 use anyhow::Result;
 use rweb::*;
@@ -80,4 +82,43 @@ pub async fn get_price_profile(
     .await
     .map(|r| r.into())
     .map_err(internal_error)
+}
+
+#[get("/collection/{collection_slug}")]
+#[openapi(tags("system"))]
+#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(description = r#"
+Fetches collection stats
+"#)]
+pub async fn get_collection_profile(
+    #[data] pool: PgPool,
+    collection_slug: String,
+) -> Result<Json<CollectionProfile>, Rejection> {
+    println!("/get_collection/{}", collection_slug);
+    let mut conn = pool.acquire().await.map_err(internal_error)?;
+
+    CollectionProfile::make(&mut conn, &collection_slug.to_string())
+        .await
+        .map(|r| r.into())
+        .map_err(internal_error)
+}
+
+#[get("/wallet/{collection_slug}/{wallet}")]
+#[openapi(tags("system"))]
+#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(description = r#"
+Fetches wallet stats
+"#)]
+pub async fn get_wallet_profile(
+    #[data] pool: PgPool,
+    wallet: String,
+    collection_slug: String,
+) -> Result<Json<WalletProfile>, Rejection> {
+    println!("/get_wallet/{}/{}", collection_slug, wallet);
+    let mut conn = pool.acquire().await.map_err(internal_error)?;
+
+    WalletProfile::make(&mut conn, &collection_slug, &wallet)
+        .await
+        .map(|r| r.into())
+        .map_err(internal_error)
 }

@@ -18,6 +18,8 @@ pub async fn start() {
             .and(handlers::status(pool.clone()).boxed())
             .or(handlers::get_profile(pool.clone()).boxed())
             .or(handlers::get_price_profile(pool.clone()).boxed())
+            .or(handlers::get_collection_profile(pool.clone()).boxed())
+            .or(handlers::get_wallet_profile(pool.clone()).boxed())
             .recover(handle_rejection)
             .with(cors)
     });

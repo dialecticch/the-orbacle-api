@@ -210,6 +210,26 @@ pub async fn read_latest_sale_for_collection(
     .map_err(|e| e.into())
 }
 
+pub async fn read_highest_sale_for_collection(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+) -> Result<i32> {
+    sqlx::query_scalar!(
+        r#"
+                select
+                    token_id
+                from
+                    sale
+                where collection_slug = $1 
+                group by token_id, price order by price desc
+            "#,
+        collection_slug,
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 pub async fn read_sales_for_asset(
     conn: &mut PgConnection,
     collection_slug: &str,
@@ -320,6 +340,28 @@ pub async fn read_latests_listing_for_collection(
             order by timestamp desc
         "#,
         collection_slug,
+    )
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
+pub async fn read_nr_listed_for_collection_at_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    timestamp: &NaiveDateTime,
+) -> Result<Option<i64>> {
+    sqlx::query_scalar!(
+        r#"
+            select
+                count(distinct(token_id))
+            from
+                listing
+            where collection_slug = $1 and timestamp < $2 and price > 0
+             
+        "#,
+        collection_slug,
+        timestamp.timestamp() as i32,
     )
     .fetch_one(&mut *conn)
     .await
