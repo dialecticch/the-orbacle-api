@@ -29,6 +29,7 @@ pub struct Asset {
 #[derive(serde::Serialize, Debug)]
 pub struct Collection {
     pub slug: String,
+    pub name: String,
     pub address: String,
     pub total_supply: i32,
     pub floor_price: f64,

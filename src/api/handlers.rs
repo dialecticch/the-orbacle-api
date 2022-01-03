@@ -4,7 +4,7 @@ use crate::profiles::token::collection_profile::CollectionProfile;
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::profiles::token::token_profile::TokenProfile;
 use crate::profiles::token::wallet_profile::WalletProfile;
-use crate::storage::read::read_collection;
+use crate::storage::read::{read_all_collections, read_collection};
 use anyhow::Result;
 use rweb::*;
 use sqlx::PgPool;
@@ -98,6 +98,22 @@ pub async fn get_collection_profile(
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
     CollectionProfile::make(&mut conn, &collection_slug.to_string())
+        .await
+        .map(|r| r.into())
+        .map_err(internal_error)
+}
+
+#[get("/collection/")]
+#[openapi(tags("system"))]
+#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(description = r#"
+Fetches collection stats
+"#)]
+pub async fn get_all_collections(#[data] pool: PgPool) -> Result<Json<Vec<String>>, Rejection> {
+    println!("/get_all_collections/");
+    let mut conn = pool.acquire().await.map_err(internal_error)?;
+
+    read_all_collections(&mut conn)
         .await
         .map(|r| r.into())
         .map_err(internal_error)

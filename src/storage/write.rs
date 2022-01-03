@@ -49,13 +49,13 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
 pub async fn write_collection(
     conn: &mut PgConnection,
     collection: &Collection,
-    rarity_cutoff: f64,
     avg_trait_rarity: f64,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
        insert into collection(
             slug,
+            name,
             address,
             total_supply,
             rarity_cutoff,
@@ -70,12 +70,13 @@ pub async fn write_collection(
             nr_owners
        )
        values
-           ($1, $2, $3, $4, $5,$6, $7, $8, $9, $10, $11, $12, $13);
+           ($1, $2, $3, $4, $5,$6, $7, $8, $9, $10, $11, $12, $13, $14);
        "#,
         collection.slug.to_lowercase(),
+        collection.name.clone().unwrap_or_default(),
         collection.primary_asset_contracts[0].address.to_lowercase(),
         collection.stats.total_supply as i32,
-        rarity_cutoff,
+        (avg_trait_rarity * 2.0) / 100f64,
         collection.stats.floor_price,
         avg_trait_rarity,
         collection.banner_image_url,

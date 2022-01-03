@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use chrono::Utc;
 use serde_aux::prelude::*;
 
 use std::collections::HashMap;
@@ -15,6 +16,7 @@ pub struct Collection {
     pub primary_asset_contracts: Vec<AssetContract>,
     pub traits: HashMap<String, HashMap<String, u64>>,
     pub slug: String,
+    pub name: Option<String>,
     pub banner_image_url: String,
     pub stats: CollectionStats,
 }
@@ -89,7 +91,7 @@ pub struct AssetContract {
     opensea_version: Option<String>,
     owner: Option<u64>,
     schema_name: SchemaName,
-    symbol: Option<String>,
+    pub symbol: Option<String>,
     #[serde(deserialize_with = "deserialize_option_number_from_string")]
     pub total_supply: Option<u64>,
     description: Option<String>,
@@ -104,6 +106,16 @@ pub struct AssetContract {
     buyer_fee_basis_points: u64,
     seller_fee_basis_points: u64,
     payout_address: Option<String>,
+}
+
+impl Default for AssetContract {
+    fn default() -> Self {
+        Self {
+            created_date: Utc::now().naive_utc(),
+            schema_name: SchemaName::ERC721,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -121,10 +133,11 @@ pub struct EmbeddedAsset {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Asset {
-    pub name: String,
+    pub name: Option<String>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub token_id: u64,
     pub image_url: String,
+    pub asset_contract: AssetContract,
     pub sell_orders: Option<Vec<SellOrder>>,
     pub traits: Option<Vec<Trait>>,
     pub owner: Owner,

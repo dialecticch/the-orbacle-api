@@ -4,6 +4,7 @@ use super::{
 };
 use crate::analyzers::listings::*;
 use crate::analyzers::rarities::get_trait_rarities;
+use crate::from_wei;
 use crate::storage::read::read_asset;
 use crate::storage::read::read_assets_for_owner;
 use crate::storage::Collection;
@@ -16,6 +17,7 @@ pub struct TokenProfile {
     pub name: String,
     pub owner: String,
     pub collection_slug: String,
+    pub collection_name: String,
     pub token_id: i32,
     pub image_url: String,
     pub listing_price: Option<f64>,
@@ -54,9 +56,10 @@ impl TokenProfile {
             name: asset.name,
             owner: asset.owner.clone(),
             collection_slug: collection_slug.to_string(),
+            collection_name: collection.name.to_string(),
             token_id,
             image_url: asset.image_url,
-            listing_price,
+            listing_price: listing_price.map(from_wei),
             owner_tokens_in_collection: read_assets_for_owner(conn, &collection_slug, &asset.owner)
                 .await?
                 .unwrap_or_default(),

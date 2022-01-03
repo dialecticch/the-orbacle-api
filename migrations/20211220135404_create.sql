@@ -17,6 +17,7 @@ CREATE TABLE ASSET (
 
 CREATE TABLE COLLECTION (
     slug VARCHAR NOT NULL,
+    name VARCHAR NOT NULL,
     address VARCHAR NOT NULL,
     banner_image_url VARCHAR NOT NULL,
     total_supply INT NOT NULL,

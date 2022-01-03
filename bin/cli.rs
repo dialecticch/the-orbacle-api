@@ -22,7 +22,6 @@ pub async fn main() {
                 .short("-s")
                 .long("store")
                 .value_name("COLLECTION")
-                .value_name("CUTOFF")
                 .value_name("TOT_SUPPLY")
                 .help("Stores collection data")
                 .takes_value(true),
@@ -53,9 +52,6 @@ pub async fn main() {
         store(
             params[0],
             params[1]
-                .parse::<f64>()
-                .expect("CUTOFT was not and float (3% -> 0.03)"),
-            params[2]
                 .parse::<usize>()
                 .expect("TOT_SUPPLY was not and number"),
         )
@@ -101,7 +97,7 @@ pub async fn main() {
     }
 }
 
-async fn store(collection_slug: &str, rarity_cutoff: f64, total_supply: usize) -> Result<()> {
+async fn store(collection_slug: &str, total_supply: usize) -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
@@ -113,7 +109,6 @@ async fn store(collection_slug: &str, rarity_cutoff: f64, total_supply: usize) -
     write_collection(
         &mut conn,
         &collection.collection,
-        rarity_cutoff,
         collection_avg_trait_rarity,
     )
     .await

@@ -39,7 +39,11 @@ pub async fn process_assets(
             .count();
 
         assets.push(Asset {
-            name: asset.name,
+            name: asset.name.unwrap_or(format!(
+                "{} #{}",
+                asset.asset_contract.symbol.unwrap_or_default(),
+                asset.token_id
+            )),
             collection_slug: collection_slug.to_string(),
             token_id: asset.token_id as i32,
             image_url: asset.image_url,
@@ -152,7 +156,8 @@ mod tests {
     #[tokio::test]
     async fn test_asset_process() {
         let asset1 = OpenseaAsset {
-            name: String::from("Test"),
+            name: Some(String::from("Test")),
+            asset_contract: AssetContract::default(),
             token_id: 1u64,
             image_url: String::from("Test"),
             sell_orders: None,
@@ -204,7 +209,8 @@ mod tests {
         };
 
         let asset2 = OpenseaAsset {
-            name: String::from("Test"),
+            name: Some(String::from("Test")),
+            asset_contract: AssetContract::default(),
             token_id: 2u64,
             image_url: String::from("Test"),
             sell_orders: None,
@@ -256,7 +262,8 @@ mod tests {
         };
 
         let asset3 = OpenseaAsset {
-            name: String::from("Test"),
+            name: Some(String::from("Test")),
+            asset_contract: AssetContract::default(),
             token_id: 2u64,
             image_url: String::from("Test"),
             sell_orders: None,
