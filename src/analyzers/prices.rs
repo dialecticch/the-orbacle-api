@@ -34,7 +34,7 @@ pub async fn get_most_valued_trait_floor(
 ) -> Result<(Option<String>, Option<f64>)> {
     let mut token_traits_filtered = token_traits
         .iter()
-        .filter(|t| t.1 < cutoff / 100f64)
+        .filter(|t| t.1 < cutoff)
         .cloned()
         .collect::<Vec<_>>();
 
@@ -42,7 +42,7 @@ pub async fn get_most_valued_trait_floor(
     if token_traits_filtered.is_empty()
         && token_traits.iter().filter(|t| t.1 < cutoff).count() == token_traits.len()
     {
-        token_traits_filtered = token_traits;
+        token_traits_filtered = token_traits.clone();
     }
 
     let mut highest_floor = (String::default(), 0f64);
@@ -93,7 +93,7 @@ pub async fn get_rarity_weighted_floor(
     let token_traits = traits
         .clone()
         .into_iter()
-        .filter(|t| t.1 < (cutoff / 300f64))
+        .filter(|t| t.1 < (cutoff / 3f64))
         .collect::<Vec<_>>();
 
     if token_traits.is_empty() {

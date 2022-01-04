@@ -23,6 +23,9 @@ pub async fn main() {
                 .long("store")
                 .value_name("COLLECTION")
                 .value_name("TOT_SUPPLY")
+                .value_name("MULTIPLIER")
+                .value_name("IGNORED_TRAIT_TYPES")
+                .value_name("IGNORED_TRAIT_VALUES")
                 .help("Stores collection data")
                 .takes_value(true),
         )
@@ -51,9 +54,10 @@ pub async fn main() {
         let params = c.into_iter().collect::<Vec<_>>();
         store(
             params[0],
-            params[1]
-                .parse::<usize>()
-                .expect("TOT_SUPPLY was not and number"),
+            params[1].parse().expect("TOT_SUPPLY was not and number"),
+            params[2].parse().expect("MULTIPLIER was not and number"),
+            serde_json::from_str(params[3]).expect("VALUE was not and string[]"),
+            serde_json::from_str(params[4]).expect("VALUE was not and string[]"),
         )
         .await
         .unwrap();
@@ -97,12 +101,35 @@ pub async fn main() {
     }
 }
 
-async fn store(collection_slug: &str, total_supply: usize) -> Result<()> {
+async fn store(
+    collection_slug: &str,
+    total_supply: usize,
+    multiplier: f64,
+    ignored_trait_types: Vec<String>,
+    ignored_trait_values: Vec<String>,
+) -> Result<()> {
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await?;
 
     let client = OpenseaAPIClient::new(1);
-    let collection = client.get_collection(collection_slug).await?;
+    let mut collection = client.get_collection(collection_slug).await?;
+
+    let len_bef = collection.collection.traits.len();
+
+    collection.collection.traits = collection
+        .collection
+        .traits
+        .into_iter()
+        .filter(|(t, _)| {
+            println!("{:?}", &t.to_lowercase());
+            !ignored_trait_types.contains(&t.to_lowercase())
+        })
+        .collect();
+
+    println!(
+        "   Trait Types Excluded: {:?}",
+        len_bef - collection.collection.traits.len()
+    );
 
     let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&collection.collection)?;
 
@@ -110,6 +137,9 @@ async fn store(collection_slug: &str, total_supply: usize) -> Result<()> {
         &mut conn,
         &collection.collection,
         collection_avg_trait_rarity,
+        multiplier,
+        ignored_trait_types,
+        ignored_trait_values,
     )
     .await
     .unwrap_or_default();

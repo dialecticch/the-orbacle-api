@@ -50,6 +50,9 @@ pub async fn write_collection(
     conn: &mut PgConnection,
     collection: &Collection,
     avg_trait_rarity: f64,
+    multiplier: f64,
+    ignored_trait_types: Vec<String>,
+    ignored_trait_values: Vec<String>,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
@@ -57,6 +60,8 @@ pub async fn write_collection(
             slug,
             name,
             address,
+            ignored_trait_types,
+            ignored_trait_values,
             total_supply,
             rarity_cutoff,
             floor_price,
@@ -70,13 +75,15 @@ pub async fn write_collection(
             nr_owners
        )
        values
-           ($1, $2, $3, $4, $5,$6, $7, $8, $9, $10, $11, $12, $13, $14);
+           ($1, $2, $3, $4, $5,$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16);
        "#,
         collection.slug.to_lowercase(),
         collection.name.clone().unwrap_or_default(),
         collection.primary_asset_contracts[0].address.to_lowercase(),
+        &ignored_trait_types,
+        &ignored_trait_values,
         collection.stats.total_supply as i32,
-        (avg_trait_rarity * 2.0) / 100f64,
+        (avg_trait_rarity * multiplier) / collection.stats.total_supply,
         collection.stats.floor_price,
         avg_trait_rarity,
         collection.banner_image_url,
