@@ -44,3 +44,4 @@ derive_more = "0.99"
 sqlx = { version = "0.5", features = [ "runtime-async-std-rustls", "postgres", "chrono", "json", "uuid" ] }
 clap = "2.34.0"
 itertools = "0.10.3"
+cached = "0.26.2"

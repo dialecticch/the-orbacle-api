@@ -11,7 +11,7 @@ use crate::storage::Collection;
 use anyhow::Result;
 use sqlx::PgConnection;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
 pub struct TokenProfile {
     pub opensea: String,
     pub name: String,

@@ -3,7 +3,7 @@ use crate::storage::read::read_asset;
 use anyhow::Result;
 use sqlx::PgConnection;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
 pub struct RarityProfile {
     pub rarest_trait: String,
     pub most_valued_trait: Option<String>,

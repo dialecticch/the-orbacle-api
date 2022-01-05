@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use sqlx::PgConnection;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Default)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Default, Clone)]
 pub struct CollectionProfile {
     pub banner_image_url: String,
     pub daily_volume: f64,

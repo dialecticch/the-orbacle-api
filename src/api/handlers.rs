@@ -6,8 +6,9 @@ use crate::profiles::token::token_profile::TokenProfile;
 use crate::profiles::token::wallet_profile::WalletProfile;
 use crate::storage::read::{read_all_collections, read_collection};
 use anyhow::Result;
+use cached::proc_macro::cached;
 use rweb::*;
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 
 #[get("/status")]
 #[openapi(tags("system"))]
@@ -38,14 +39,26 @@ pub async fn get_profile(
     println!("/get_profile/{}/{}", collection_slug, token_id);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    let collection = read_collection(&mut conn, &collection_slug)
-        .await
-        .map_err(internal_error)?;
-
-    TokenProfile::make(&mut conn, collection, token_id)
+    _get_profile(&mut conn, collection_slug, token_id)
         .await
         .map(|r| r.into())
         .map_err(internal_error)
+}
+
+#[cached(
+    size = 1,
+    result = true,
+    key = "String",
+    convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
+)]
+async fn _get_profile(
+    conn: &mut PgConnection,
+    collection_slug: String,
+    token_id: i32,
+) -> Result<TokenProfile> {
+    let collection = read_collection(conn, &collection_slug).await?;
+
+    TokenProfile::make(conn, collection, token_id).await
 }
 
 #[get("/price/{collection_slug}/{token_id}")]
@@ -62,26 +75,39 @@ pub async fn get_price_profile(
     println!("/get_price_profile/{}/{}", collection_slug, token_id);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    let token_traits = get_trait_rarities(&mut conn, &collection_slug.to_string(), token_id)
+    _get_price_profile(&mut conn, collection_slug, token_id)
+        .await
+        .map(|r| r.into())
+        .map_err(internal_error)
+}
+
+#[cached(
+    size = 1,
+    result = true,
+    key = "String",
+    convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
+)]
+async fn _get_price_profile(
+    conn: &mut PgConnection,
+    collection_slug: String,
+    token_id: i32,
+) -> Result<PriceProfile> {
+    let token_traits = get_trait_rarities(conn, &collection_slug.to_string(), token_id)
         .await
         .unwrap()
         .into_iter()
         .collect::<Vec<_>>();
 
-    let collection = read_collection(&mut conn, &collection_slug)
-        .await
-        .map_err(internal_error)?;
+    let collection = read_collection(conn, &collection_slug).await?;
 
     PriceProfile::make(
-        &mut conn,
+        conn,
         &collection_slug.to_string(),
         token_id,
         token_traits,
         collection.rarity_cutoff,
     )
     .await
-    .map(|r| r.into())
-    .map_err(internal_error)
 }
 
 #[get("/collection/{collection_slug}")]

@@ -5,7 +5,7 @@ use crate::storage::read::read_trait;
 use anyhow::Result;
 use sqlx::PgConnection;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
 pub struct LiquidityProfile {
     pub rarest_trait_nr_listed: (usize, usize),
     pub mvt_nr_listed: (usize, usize),
