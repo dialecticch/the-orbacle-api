@@ -4,7 +4,7 @@ use anyhow::Result;
 use sqlx::PgConnection;
 use std::collections::HashMap;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
 pub struct WalletProfile {
     pub total_value: f64,
     pub tokens: HashMap<String, PriceProfile>,
