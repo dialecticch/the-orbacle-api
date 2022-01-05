@@ -43,7 +43,7 @@ pub async fn get_value_for_wallet(
         .await
         .unwrap();
 
-        value += profile.max_price;
+        value += profile.custom_price.unwrap_or(profile.max_price);
 
         map.insert(token_id.to_string(), profile);
     }
