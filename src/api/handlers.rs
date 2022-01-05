@@ -46,7 +46,7 @@ pub async fn get_profile(
 }
 
 #[cached(
-    size = 1,
+    size = 25,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
@@ -82,7 +82,7 @@ pub async fn get_price_profile(
 }
 
 #[cached(
-    size = 1,
+    size = 25,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
@@ -166,7 +166,7 @@ pub async fn get_wallet_profile(
 }
 
 #[cached(
-    size = 1,
+    size = 25,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}", collection_slug, wallet) }"#
@@ -176,5 +176,6 @@ pub async fn _get_wallet_profile(
     collection_slug: String,
     wallet: String,
 ) -> Result<WalletProfile> {
+    println!("{:?}", format!("{}{}", collection_slug, wallet));
     WalletProfile::make(conn, &collection_slug, &wallet).await
 }
