@@ -2,6 +2,7 @@ extern crate dotenv;
 
 pub mod analyzers;
 pub mod api;
+pub mod custom;
 pub mod opensea;
 pub mod profiles;
 pub mod storage;

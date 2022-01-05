@@ -1,5 +1,6 @@
 use crate::analyzers::prices::*;
 use crate::analyzers::sales::*;
+use crate::custom::read_custom_price;
 use anyhow::Result;
 use sqlx::PgConnection;
 
@@ -13,6 +14,7 @@ pub struct PriceProfile {
     pub avg_last_three_mvt_sales: Option<f64>,
     pub last_sale_relative_collection_avg: Option<f64>,
     pub last_sale_relative_mvt_avg: Option<f64>,
+    pub custom_price: Option<f64>,
     pub max_price: f64,
 }
 
@@ -93,6 +95,7 @@ impl PriceProfile {
             avg_last_three_mvt_sales,
             last_sale_relative_collection_avg,
             last_sale_relative_mvt_avg,
+            custom_price: read_custom_price(collection_slug, token_id)?,
             max_price: prices[0],
         })
     }
