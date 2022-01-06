@@ -16,11 +16,12 @@ pub async fn start() {
     let (spec, filter) = openapi::spec().build(move || {
         warp::any()
             .and(handlers::status(pool.clone()).boxed())
-            .or(handlers::get_profile(pool.clone()).boxed())
-            .or(handlers::get_price_profile(pool.clone()).boxed())
-            .or(handlers::get_collection_profile(pool.clone()).boxed())
-            .or(handlers::get_wallet_profile(pool.clone()).boxed())
-            .or(handlers::get_all_collections(pool.clone()).boxed())
+            .or(handlers::user::get_profile(pool.clone()).boxed())
+            .or(handlers::user::get_price_profile(pool.clone()).boxed())
+            .or(handlers::user::get_collection_profile(pool.clone()).boxed())
+            .or(handlers::user::get_wallet_profile(pool.clone()).boxed())
+            .or(handlers::user::get_all_collections(pool.clone()).boxed())
+            .or(handlers::admin::new_collection(pool.clone()).boxed())
             .recover(handle_rejection)
             .with(cors)
     });

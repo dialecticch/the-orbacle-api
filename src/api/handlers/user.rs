@@ -1,4 +1,4 @@
-use super::errors::internal_error;
+use super::super::errors::internal_error;
 use crate::analyzers::rarities::get_trait_rarities;
 use crate::profiles::token::collection_profile::CollectionProfile;
 use crate::profiles::token::price_profile::PriceProfile;
@@ -9,21 +9,6 @@ use anyhow::Result;
 use cached::proc_macro::cached;
 use rweb::*;
 use sqlx::{PgConnection, PgPool};
-
-#[get("/status")]
-#[openapi(tags("system"))]
-#[openapi(summary = "Healthcheck")]
-#[openapi(description = r#"
-Checks db connectivity, returns "OK" on success
-"#)]
-pub async fn status(#[data] pool: PgPool) -> Result<Json<String>, Rejection> {
-    let mut conn = pool.acquire().await.map_err(internal_error)?;
-    sqlx::query!(r#"select 'OK' as ok"#)
-        .fetch_one(&mut conn)
-        .await
-        .map(|r| r.ok.unwrap().into())
-        .map_err(internal_error)
-}
 
 #[get("/profile/{collection_slug}/{token_id}")]
 #[openapi(tags("system"))]
