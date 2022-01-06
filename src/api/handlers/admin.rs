@@ -1,14 +1,17 @@
 use super::super::errors::{internal_error, ServiceError};
 use crate::analyzers::rarities::get_collection_avg_trait_rarity;
 use crate::opensea::types::AssetsRequest;
-use crate::opensea::OpenseaAPIClient;
+use crate::opensea::{types::Trait, OpenseaAPIClient};
+use crate::storage::delete::*;
 use crate::storage::preprocess;
 use crate::storage::write::*;
+use crate::storage::Trait as StorageTrait;
 use crate::updater::*;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use rweb::*;
 use sqlx::{PgConnection, PgPool};
+use std::collections::HashSet;
 
 #[derive(serde::Deserialize, rweb::Schema)]
 pub struct NewCollectionBody {
@@ -43,7 +46,10 @@ pub async fn new_collection(
         &req.collection_slug,
         req.total_supply_expected,
         req.rarity_cutoff_multiplier,
-        req.ignored_trait_types,
+        req.ignored_trait_types
+            .into_iter()
+            .map(|t| t.to_lowercase())
+            .collect(),
         req.ignored_trait_values,
     )
     .await
@@ -60,34 +66,9 @@ async fn _store_collection(
     ignored_trait_values: Vec<String>,
 ) -> Result<()> {
     let client = OpenseaAPIClient::new(1);
-    let mut collection = client.get_collection(collection_slug).await?;
+    let collection = client.get_collection(collection_slug).await?;
 
-    collection.collection.traits = collection
-        .collection
-        .traits
-        .into_iter()
-        .filter(|(t, _)| !ignored_trait_types.contains(&t.to_lowercase()))
-        .collect();
-
-    let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&collection.collection)?;
-
-    write_collection(
-        conn,
-        &collection.collection,
-        collection_avg_trait_rarity,
-        multiplier,
-        ignored_trait_types,
-        ignored_trait_values,
-    )
-    .await
-    .unwrap_or_default();
-
-    write_traits(conn, &collection.collection)
-        .await
-        .unwrap_or_default();
-    println!("  Stored traits stats!");
-
-    println!("  Fetching assets...");
+    // println!("  Fetching assets...");
 
     let req = AssetsRequest::new()
         .collection(collection_slug)
@@ -95,6 +76,48 @@ async fn _store_collection(
         .build();
 
     let all_assets = client.get_assets(req).await?;
+
+    let traits_all = all_assets
+        .clone()
+        .iter()
+        .map(|a| a.traits.clone())
+        .flatten()
+        .flatten()
+        .collect::<Vec<_>>();
+    println!("{:?}", traits_all.len());
+
+    let traits_filtered: HashSet<Trait> = traits_all
+        .into_iter()
+        .filter(|t| t.trait_count.is_some())
+        .filter(|t| !ignored_trait_types.contains(&t.trait_type.to_lowercase()))
+        .collect();
+
+    let traits: Vec<StorageTrait> = traits_filtered
+        .into_iter()
+        .map(|t| StorageTrait {
+            collection_slug: collection_slug.to_lowercase(),
+            trait_type: t.trait_type.clone().to_lowercase(),
+            trait_name: t.value.to_lowercase(),
+            trait_count: t.trait_count.unwrap() as i32,
+        })
+        .collect::<Vec<StorageTrait>>();
+
+    let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&traits)?;
+
+    write_traits(conn, traits).await.unwrap_or_default();
+
+    write_collection(
+        conn,
+        &collection.collection,
+        collection_avg_trait_rarity,
+        multiplier,
+        ignored_trait_types.clone(),
+        ignored_trait_values,
+    )
+    .await
+    .unwrap_or_default();
+
+    println!("  Stored traits stats!");
 
     println!("  Storing {} assets...", all_assets.len());
 
@@ -193,18 +216,46 @@ async fn _update_collection(
     ignored_trait_values: Vec<String>,
 ) -> Result<()> {
     let client = OpenseaAPIClient::new(1);
-    let mut collection = client.get_collection(collection_slug).await?;
+    let collection = client.get_collection(collection_slug).await?;
 
-    collection.collection.traits = collection
-        .collection
-        .traits
-        .into_iter()
-        .filter(|(t, _)| !ignored_trait_types.contains(&t.to_lowercase()))
-        .collect();
-
-    let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&collection.collection)?;
+    println!("  Fetching assets...");
 
     let total_supply = collection.collection.stats.total_supply;
+
+    let req = AssetsRequest::new()
+        .collection(collection_slug)
+        .expected(total_supply as usize)
+        .build();
+
+    let all_assets = client.get_assets(req).await?;
+
+    let traits_all = all_assets
+        .clone()
+        .iter()
+        .map(|a| a.traits.clone())
+        .flatten()
+        .flatten()
+        .collect::<Vec<_>>();
+    println!("{:?}", traits_all.len());
+
+    let traits_filtered: HashSet<Trait> = traits_all
+        .into_iter()
+        .filter(|t| t.trait_count.is_some())
+        .filter(|t| !ignored_trait_types.contains(&t.trait_type.to_lowercase()))
+        .collect();
+    println!("{:?}", traits_filtered.len());
+
+    let traits: Vec<StorageTrait> = traits_filtered
+        .into_iter()
+        .map(|t| StorageTrait {
+            collection_slug: collection_slug.to_lowercase(),
+            trait_type: t.trait_type.clone().to_lowercase(),
+            trait_name: t.value.to_lowercase(),
+            trait_count: t.trait_count.unwrap() as i32,
+        })
+        .collect::<Vec<StorageTrait>>();
+
+    let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&traits)?;
 
     update_collection_info(
         conn,
@@ -217,9 +268,40 @@ async fn _update_collection(
     .await
     .unwrap_or_default();
 
-    update_traits(conn, &collection.collection)
+    update_traits(conn, collection_slug, traits)
         .await
         .unwrap_or_default();
 
+    Ok(())
+}
+
+#[delete("/admin/collection/{collection_slug}")]
+#[openapi(tags("Admin"))]
+#[openapi(summary = "Update values in a new collection")]
+#[openapi(description = r#"
+Fetches and stores collection data
+"#)]
+pub async fn delete_collection(
+    #[data] pool: PgPool,
+    #[header = "x-api-key"] key: String,
+    collection_slug: String,
+) -> Result<Json<()>, Rejection> {
+    println!("/delete_collection/{}/{}", key, collection_slug);
+    let mut conn = pool.acquire().await.map_err(internal_error)?;
+
+    if key != dotenv::var("ADMIN").unwrap() {
+        return Err(warp::reject::custom(ServiceError::Unauthorized));
+    }
+
+    _delete_collection(&mut conn, &collection_slug)
+        .await
+        .map_err(internal_error)?;
+    Ok(().into())
+}
+
+async fn _delete_collection(conn: &mut PgConnection, collection_slug: &str) -> Result<()> {
+    purge_collection(conn, collection_slug)
+        .await
+        .unwrap_or_default();
     Ok(())
 }

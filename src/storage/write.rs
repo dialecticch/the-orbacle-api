@@ -1,4 +1,3 @@
-use super::Trait;
 use crate::opensea::types::{Collection, Event};
 use anyhow::Result;
 use sqlx::postgres::PgQueryResult;
@@ -149,26 +148,7 @@ pub async fn update_collection_info(
 }
 
 // ============ TRAITS ============
-pub async fn write_traits(conn: &mut PgConnection, collection: &Collection) -> Result<()> {
-    let traits: Vec<Trait> = collection
-        .traits
-        .clone()
-        .into_iter()
-        .map(|(k, v)| {
-            v.into_iter()
-                .map(|(n, c)| Trait {
-                    collection_slug: collection.slug.clone().to_lowercase(),
-                    trait_type: k.clone().to_lowercase(),
-                    trait_name: n.to_lowercase(),
-                    trait_count: c as i32,
-                })
-                .collect::<Vec<Trait>>()
-        })
-        .collect::<Vec<Vec<Trait>>>()
-        .into_iter()
-        .flatten()
-        .collect();
-
+pub async fn write_traits(conn: &mut PgConnection, traits: Vec<super::Trait>) -> Result<()> {
     let mut txn = conn.begin().await?;
     for t in traits {
         sqlx::query!(
@@ -193,33 +173,18 @@ pub async fn write_traits(conn: &mut PgConnection, collection: &Collection) -> R
     txn.commit().await.map_err(|e| e.into())
 }
 
-pub async fn update_traits(conn: &mut PgConnection, collection: &Collection) -> Result<()> {
-    let traits: Vec<Trait> = collection
-        .traits
-        .clone()
-        .into_iter()
-        .map(|(k, v)| {
-            v.into_iter()
-                .map(|(n, c)| Trait {
-                    collection_slug: collection.slug.clone().to_lowercase(),
-                    trait_type: k.clone().to_lowercase(),
-                    trait_name: n.to_lowercase(),
-                    trait_count: c as i32,
-                })
-                .collect::<Vec<Trait>>()
-        })
-        .collect::<Vec<Vec<Trait>>>()
-        .into_iter()
-        .flatten()
-        .collect();
-
+pub async fn update_traits(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    traits: Vec<super::Trait>,
+) -> Result<()> {
     let mut txn = conn.begin().await?;
 
     sqlx::query!(
         r#"
         delete from trait where collection_slug = $1
     "#,
-        &collection.slug,
+        &collection_slug,
     )
     .execute(&mut txn)
     .await?;

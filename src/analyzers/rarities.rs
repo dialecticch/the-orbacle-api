@@ -1,8 +1,7 @@
-use crate::opensea::types::Collection;
 use crate::storage::read::*;
+use crate::storage::Trait;
 use anyhow::Result;
 use sqlx::PgConnection;
-use std::collections::HashMap;
 
 pub async fn get_trait_rarities(
     conn: &mut PgConnection,
@@ -20,19 +19,11 @@ pub async fn get_trait_rarities(
         .collect())
 }
 
-pub fn get_collection_avg_trait_rarity(collection: &Collection) -> Result<f64> {
-    let traits: Vec<u64> = collection
-        .clone()
-        .traits
+pub fn get_collection_avg_trait_rarity(traits: &Vec<Trait>) -> Result<f64> {
+    let traits: Vec<i32> = traits
         .into_iter()
-        .map(|(_, v)| v)
-        .collect::<Vec<HashMap<String, u64>>>()
-        .into_iter()
-        .map(|k| k.into_iter().map(|(_, v)| v).collect())
-        .collect::<Vec<Vec<u64>>>()
-        .into_iter()
-        .flatten()
-        .collect();
+        .map(|k| k.trait_count as i32)
+        .collect::<Vec<_>>();
 
-    Ok(traits.iter().sum::<u64>() as f64 / traits.len() as f64)
+    Ok(traits.iter().sum::<i32>() as f64 / traits.len() as f64)
 }

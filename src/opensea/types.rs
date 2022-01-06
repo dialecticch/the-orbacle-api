@@ -53,16 +53,20 @@ pub struct SellOrder {
 pub struct Owner {
     pub address: String,
 }
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Hash)]
 pub struct Trait {
     pub trait_type: String,
     #[serde(deserialize_with = "deserialize_string_from_number")]
     pub value: String,
-    pub display_type: Option<String>,
-    pub max_value: Option<u64>,
     pub trait_count: Option<u64>,
-    pub order: Option<String>,
 }
+
+impl PartialEq for Trait {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+impl Eq for Trait {}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum AssetContractType {

@@ -22,6 +22,8 @@ pub async fn start() {
             .or(handlers::user::get_wallet_profile(pool.clone()).boxed())
             .or(handlers::user::get_all_collections(pool.clone()).boxed())
             .or(handlers::admin::new_collection(pool.clone()).boxed())
+            .or(handlers::admin::update_collection(pool.clone()).boxed())
+            .or(handlers::admin::delete_collection(pool.clone()).boxed())
             .recover(handle_rejection)
             .with(cors)
     });

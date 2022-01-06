@@ -39,9 +39,7 @@ pub async fn get_most_valued_trait_floor(
         .collect::<Vec<_>>();
 
     // if all traits are above the average rarity
-    if token_traits_filtered.is_empty()
-        && token_traits.iter().filter(|t| t.1 < cutoff).count() == token_traits.len()
-    {
+    if token_traits_filtered.is_empty() {
         token_traits_filtered = token_traits.clone();
     }
 

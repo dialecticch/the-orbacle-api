@@ -1,3 +1,4 @@
+pub mod delete;
 pub mod preprocess;
 pub mod read;
 pub mod write;
