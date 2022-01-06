@@ -19,9 +19,9 @@ pub async fn get_trait_rarities(
         .collect())
 }
 
-pub fn get_collection_avg_trait_rarity(traits: &Vec<Trait>) -> Result<f64> {
+pub fn get_collection_avg_trait_rarity(traits: &[Trait]) -> Result<f64> {
     let traits: Vec<i32> = traits
-        .into_iter()
+        .iter()
         .map(|k| k.trait_count as i32)
         .collect::<Vec<_>>();
 

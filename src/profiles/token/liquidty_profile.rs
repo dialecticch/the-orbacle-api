@@ -1,6 +1,7 @@
 use crate::analyzers::listings::*;
 use crate::analyzers::prices::*;
 use crate::analyzers::velocity::*;
+use crate::storage::read::read_assets_with_trait;
 use crate::storage::read::read_trait;
 use anyhow::Result;
 use sqlx::PgConnection;
@@ -28,9 +29,9 @@ impl LiquidityProfile {
             .await?
             .0;
 
-        let rarest_trait_count = read_trait(conn, collection_slug, &rarest_trait)
+        let rarest_trait_count = read_assets_with_trait(conn, collection_slug, &rarest_trait)
             .await?
-            .trait_count;
+            .len();
 
         log::info!("Getting most_valuable_trait_resp");
         let most_valuable_trait_resp =

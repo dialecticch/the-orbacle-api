@@ -346,24 +346,26 @@ pub async fn read_latests_listing_for_collection(
     .map_err(|e| e.into())
 }
 
-pub async fn read_nr_listed_for_collection_at_ts(
+pub async fn read_listed_for_collection_at_ts(
     conn: &mut PgConnection,
     collection_slug: &str,
     timestamp: &NaiveDateTime,
-) -> Result<Option<i64>> {
-    sqlx::query_scalar!(
+) -> Result<Vec<Listing>> {
+    sqlx::query_as!(
+        Listing,
         r#"
-            select
-                count(distinct(token_id))
-            from
-                listing
-            where collection_slug = $1 and timestamp < $2 and price > 0
-             
+        select 
+            distinct on (token_id) *
+        from 
+            listing
+        where collection_slug = $1 and timestamp < $2 and price is not null
+        order by token_id, timestamp desc
+
         "#,
         collection_slug,
         timestamp.timestamp() as i32,
     )
-    .fetch_one(&mut *conn)
+    .fetch_all(&mut *conn)
     .await
     .map_err(|e| e.into())
 }

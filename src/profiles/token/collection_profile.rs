@@ -1,5 +1,5 @@
 use crate::storage::read::{
-    read_collection, read_listing_update_type_count_after_ts, read_nr_listed_for_collection_at_ts,
+    read_collection, read_listed_for_collection_at_ts, read_listing_update_type_count_after_ts,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
@@ -29,8 +29,9 @@ impl CollectionProfile {
 
         log::info!("Getting nr_listed_now");
         let nr_listed_now =
-            read_nr_listed_for_collection_at_ts(conn, collection_slug, &Utc::now().naive_utc())
-                .await?;
+            read_listed_for_collection_at_ts(conn, collection_slug, &Utc::now().naive_utc())
+                .await?
+                .len();
 
         let ts_14d_ago = (Utc::now() - Duration::days(14)).naive_utc();
 
@@ -43,7 +44,7 @@ impl CollectionProfile {
             monthly_avg_price: collection.monthly_avg_price,
             nr_owners: collection.nr_owners,
             avg_trait_rarity: collection.avg_trait_rarity,
-            nr_listed_now: nr_listed_now.unwrap_or_default(),
+            nr_listed_now: nr_listed_now as i64,
             nr_new_listings_14d: read_listing_update_type_count_after_ts(
                 conn,
                 collection_slug,

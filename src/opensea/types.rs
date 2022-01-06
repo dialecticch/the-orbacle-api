@@ -53,6 +53,7 @@ pub struct SellOrder {
 pub struct Owner {
     pub address: String,
 }
+#[allow(clippy::derive_hash_xor_eq)]
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Hash)]
 pub struct Trait {
     pub trait_type: String,
@@ -60,7 +61,6 @@ pub struct Trait {
     pub value: String,
     pub trait_count: Option<u64>,
 }
-
 impl PartialEq for Trait {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value

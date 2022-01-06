@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::Utc;
+//use chrono::Utc;
 //use chrono{Duration, NaiveDate}
 // use local::analyzers::{prices::*, rarities::*, sales::*};
 // use local::profiles::traits::get_daily_trait_floor;
@@ -110,10 +110,10 @@ pub async fn main() -> Result<()> {
 
     // println!("Daily Floor for {}: \n{:?}\n", TRAIT, at);
 
-    let nr_listed_now =
-        read_nr_listed_for_collection_at_ts(&mut conn, COLLECTION, &Utc::now().naive_utc()).await?;
+    // let nr_listed_now =
+    //     read_nr_listed_for_collection_at_ts(&mut conn, COLLECTION, &Utc::now().naive_utc()).await?;
 
-    println!("nr_listed_now: {:?}", nr_listed_now);
+    // println!("nr_listed_now: {:?}", nr_listed_now);
 
     let highest_sale = read_highest_sale_for_collection(&mut conn, COLLECTION).await?;
 

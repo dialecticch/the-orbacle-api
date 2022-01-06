@@ -96,7 +96,7 @@ async fn _store_collection(
         .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
-            trait_type: t.trait_type.clone().to_lowercase(),
+            trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
         })
@@ -249,7 +249,7 @@ async fn _update_collection(
         .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
-            trait_type: t.trait_type.clone().to_lowercase(),
+            trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
         })

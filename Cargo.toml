@@ -11,14 +11,6 @@ path = "src/lib.rs"
 name = "read"
 path = "bin/read_test.rs"
 
-[[bin]]
-name = "fetch"
-path = "bin/fetch_for_wallet.rs"
-
-
-[[bin]]
-name = "cli"
-path = "bin/cli.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
