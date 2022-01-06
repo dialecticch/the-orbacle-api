@@ -6,11 +6,8 @@ use local::opensea::types::AssetsRequest;
 use local::opensea::OpenseaAPIClient;
 use local::storage::establish_connection;
 use local::storage::preprocess;
-use local::storage::read::read_collection;
 use local::storage::write::*;
 use local::updater::*;
-
-use local::profiles::token::token_profile::TokenProfile;
 
 #[tokio::main]
 pub async fn main() {
@@ -29,25 +26,6 @@ pub async fn main() {
                 .help("Stores collection data")
                 .takes_value(true),
         )
-        .arg(
-            Arg::with_name("fetch")
-                .short("-f")
-                .long("fetch")
-                .value_name("COLLECTION")
-                .value_name("TOKEN_ID")
-                .value_name("CUTOFF")
-                .help("fetch token data")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("update")
-                .short("-u")
-                .long("update")
-                .value_name("COLLECTION")
-                .value_name("CUTOFF")
-                .help("update cutoff")
-                .takes_value(true),
-        )
         .get_matches();
 
     if let Some(c) = matches.values_of("store") {
@@ -61,43 +39,6 @@ pub async fn main() {
         )
         .await
         .unwrap();
-    }
-
-    if let Some(c) = matches.values_of("update") {
-        let pool = establish_connection().await;
-        let mut conn = pool.acquire().await.unwrap();
-        let params = c.into_iter().collect::<Vec<_>>();
-        update_collection_rarity_cutoff(
-            &mut conn,
-            params[0],
-            params[1]
-                .parse::<f64>()
-                .expect("TOKEN_ID was not and float"),
-        )
-        .await
-        .unwrap();
-    }
-
-    if let Some(c) = matches.values_of("fetch") {
-        let params = c.into_iter().collect::<Vec<_>>();
-        let pool = establish_connection().await;
-        let mut conn = pool.acquire().await.unwrap();
-
-        println!("Building Asset Profile...");
-
-        let collection = read_collection(&mut conn, params[0]).await.unwrap();
-
-        let profile = TokenProfile::make(
-            &mut conn,
-            collection,
-            params[1]
-                .parse::<i32>()
-                .expect("TOKEN_ID was not and number"),
-        )
-        .await
-        .unwrap();
-
-        println!("{}", serde_json::to_string_pretty(&profile).unwrap());
     }
 }
 

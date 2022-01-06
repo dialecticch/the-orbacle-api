@@ -62,8 +62,6 @@ async fn _store_collection(
     let client = OpenseaAPIClient::new(1);
     let mut collection = client.get_collection(collection_slug).await?;
 
-    let len_bef = collection.collection.traits.len();
-
     collection.collection.traits = collection
         .collection
         .traits
@@ -152,6 +150,76 @@ async fn _store_collection(
     fetch_collection_sales(conn, collection_slug, None)
         .await
         .unwrap();
+
+    Ok(())
+}
+
+#[patch("/admin/collection/")]
+#[openapi(tags("Admin"))]
+#[openapi(summary = "Update values in a new collection")]
+#[openapi(description = r#"
+Fetches and stores collection data
+"#)]
+pub async fn update_collection(
+    #[data] pool: PgPool,
+    #[header = "x-api-key"] key: String,
+    body: rweb::Json<NewCollectionBody>,
+) -> Result<Json<()>, Rejection> {
+    let req: NewCollectionBody = body.into_inner();
+    println!("/update_collection/{}/{}", key, req.collection_slug);
+    let mut conn = pool.acquire().await.map_err(internal_error)?;
+
+    if key != dotenv::var("ADMIN").unwrap() {
+        return Err(warp::reject::custom(ServiceError::Unauthorized));
+    }
+
+    _update_collection(
+        &mut conn,
+        &req.collection_slug,
+        req.rarity_cutoff_multiplier,
+        req.ignored_trait_types,
+        req.ignored_trait_values,
+    )
+    .await
+    .map_err(internal_error)?;
+    Ok(().into())
+}
+
+async fn _update_collection(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    multiplier: f64,
+    ignored_trait_types: Vec<String>,
+    ignored_trait_values: Vec<String>,
+) -> Result<()> {
+    let client = OpenseaAPIClient::new(1);
+    let mut collection = client.get_collection(collection_slug).await?;
+
+    collection.collection.traits = collection
+        .collection
+        .traits
+        .into_iter()
+        .filter(|(t, _)| !ignored_trait_types.contains(&t.to_lowercase()))
+        .collect();
+
+    let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&collection.collection)?;
+
+    let total_supply = collection.collection.stats.total_supply;
+
+    update_collection_info(
+        conn,
+        &collection.collection.slug,
+        total_supply,
+        ignored_trait_types,
+        ignored_trait_values,
+        (collection_avg_trait_rarity * multiplier) / total_supply,
+    )
+    .await
+    .unwrap_or_default();
+
+    update_traits(conn, &collection.collection)
+        .await
+        .unwrap_or_default();
 
     Ok(())
 }

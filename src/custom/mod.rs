@@ -8,10 +8,10 @@ pub fn read_custom_price(collection_slug: &str, token_id: i32) -> Result<Option<
 
     match map.get(collection_slug) {
         Some(c) => match c.get(&token_id.to_string()) {
-            Some(p) => return Ok(Some(*p)),
-            None => return Ok(None),
+            Some(p) => Ok(Some(*p)),
+            None => Ok(None),
         },
-        None => return Ok(None),
+        None => Ok(None),
     }
 }
 

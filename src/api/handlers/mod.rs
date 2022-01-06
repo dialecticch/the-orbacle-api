@@ -4,7 +4,7 @@ pub mod user;
 use super::errors::internal_error;
 use anyhow::Result;
 use rweb::*;
-use sqlx::{PgConnection, PgPool};
+use sqlx::PgPool;
 
 #[get("/status")]
 #[openapi(tags("system"))]

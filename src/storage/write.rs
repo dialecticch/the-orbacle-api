@@ -119,19 +119,28 @@ pub async fn update_collection_floor(
     .map_err(|e| e.into())
 }
 
-pub async fn update_collection_rarity_cutoff(
+pub async fn update_collection_info(
     conn: &mut PgConnection,
     collection_slug: &str,
+    total_supply: f64,
+    ignored_trait_types: Vec<String>,
+    ignored_trait_values: Vec<String>,
     rarity_cutoff: f64,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
         update collection
             set
-            rarity_cutoff = $1
-        where slug= $2
+            ignored_trait_types = $1,
+            ignored_trait_values = $2,
+            rarity_cutoff = $3,
+            total_supply = $4
+        where slug= $5
        "#,
+        &ignored_trait_types,
+        &ignored_trait_values,
         rarity_cutoff,
+        total_supply as i32,
         collection_slug
     )
     .execute(conn)
@@ -161,6 +170,60 @@ pub async fn write_traits(conn: &mut PgConnection, collection: &Collection) -> R
         .collect();
 
     let mut txn = conn.begin().await?;
+    for t in traits {
+        sqlx::query!(
+            r#"
+        insert into trait(
+               collection_slug,
+               trait_type,
+               trait_name,
+               trait_count
+        )
+        values
+            ($1, $2, $3, $4)
+        "#,
+            t.collection_slug,
+            t.trait_type,
+            t.trait_name,
+            t.trait_count
+        )
+        .execute(&mut txn)
+        .await?;
+    }
+    txn.commit().await.map_err(|e| e.into())
+}
+
+pub async fn update_traits(conn: &mut PgConnection, collection: &Collection) -> Result<()> {
+    let traits: Vec<Trait> = collection
+        .traits
+        .clone()
+        .into_iter()
+        .map(|(k, v)| {
+            v.into_iter()
+                .map(|(n, c)| Trait {
+                    collection_slug: collection.slug.clone().to_lowercase(),
+                    trait_type: k.clone().to_lowercase(),
+                    trait_name: n.to_lowercase(),
+                    trait_count: c as i32,
+                })
+                .collect::<Vec<Trait>>()
+        })
+        .collect::<Vec<Vec<Trait>>>()
+        .into_iter()
+        .flatten()
+        .collect();
+
+    let mut txn = conn.begin().await?;
+
+    sqlx::query!(
+        r#"
+        delete from trait where collection_slug = $1
+    "#,
+        &collection.slug,
+    )
+    .execute(&mut txn)
+    .await?;
+
     for t in traits {
         sqlx::query!(
             r#"
