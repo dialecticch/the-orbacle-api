@@ -35,6 +35,7 @@ CREATE TABLE COLLECTION (
 
 CREATE TABLE TRAIT (
     collection_slug VARCHAR NOT NULL,
+    trait_id VARCHAR NOT NULL,
     trait_type VARCHAR NOT NULL,
     trait_name VARCHAR NOT NULL,
     trait_count INT NOT NULL,

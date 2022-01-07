@@ -10,6 +10,7 @@ pub async fn process_assets(
     conn: &mut PgConnection,
     os_assets: Vec<OpenseaAsset>,
     collection_slug: &str,
+    ignored_trait_types_overlap: Vec<String>,
 ) -> Result<Vec<Asset>> {
     let collection = read_collection(conn, collection_slug).await?;
 
@@ -25,9 +26,15 @@ pub async fn process_assets(
             .filter(|t| t.trait_type.to_lowercase() != "serial")
             .collect::<Vec<_>>();
 
-        let trait_names = trait_list
+        let trait_ids = trait_list
             .iter()
-            .map(|t| t.value.to_lowercase())
+            .map(|t| {
+                format!(
+                    "{}:{}",
+                    &t.trait_type.to_lowercase(),
+                    &t.value.to_lowercase()
+                )
+            })
             .collect::<Vec<String>>();
 
         let unique_traits = asset
@@ -48,7 +55,7 @@ pub async fn process_assets(
             token_id: asset.token_id as i32,
             image_url: asset.image_url,
             owner: asset.owner.address,
-            traits: trait_names,
+            traits: trait_ids,
             unique_traits: unique_traits as i32,
             traits_3_combination_overlap: 0i32,
             traits_4_combination_overlap: 0i32,
@@ -61,14 +68,16 @@ pub async fn process_assets(
     println!("base processing done");
 
     let mut res = vec![];
-
-    let chunks: Vec<_> = assets.chunks(16).collect();
+    let cpus = num_cpus::get();
+    println!("cpus: {:?}", cpus);
+    let chunks: Vec<_> = assets.chunks(cpus).collect();
     let mut handlers = vec![];
     for c in chunks {
         let collection = assets.clone();
+        let ignored = ignored_trait_types_overlap.clone();
         let list = c.to_vec();
         handlers.push(std::thread::spawn(move || {
-            compute_combinations(list.clone(), collection).unwrap()
+            compute_combinations(list.clone(), collection, &ignored.clone()).unwrap()
         }))
     }
 
@@ -79,57 +88,82 @@ pub async fn process_assets(
     Ok(res)
 }
 
-fn compute_combinations(assets: Vec<Asset>, collection: Vec<Asset>) -> Result<Vec<Asset>> {
+fn compute_combinations(
+    assets: Vec<Asset>,
+    collection: Vec<Asset>,
+    ignored_trait_types_overlap: &Vec<String>,
+) -> Result<Vec<Asset>> {
     let mut res = vec![];
+
+    let collection_filtered = collection
+        .into_iter()
+        .map(|a| {
+            (
+                a.token_id,
+                a.traits
+                    .iter()
+                    .filter(|a| !ignored_trait_types_overlap.contains(&a))
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect::<Vec<_>>();
+
     for mut asset in assets {
         let mut unique_3 = HashSet::<i32>::new();
         let mut unique_4 = HashSet::<i32>::new();
         let mut unique_5 = HashSet::<i32>::new();
 
-        for vpair in asset.traits.iter().combinations(3) {
+        let asset_traits: Vec<_> = asset
+            .traits
+            .clone()
+            .iter()
+            .filter(|a| !ignored_trait_types_overlap.contains(&a))
+            .cloned()
+            .collect();
+
+        for vpair in asset_traits.iter().combinations(3) {
             unique_3.extend(
-                collection
+                collection_filtered
                     .iter()
-                    .filter(|a| a.token_id != asset.token_id)
+                    .filter(|a| a.0 != asset.token_id)
                     .filter(|a| {
-                        a.traits.contains(vpair[0])
-                            && a.traits.contains(vpair[1])
-                            && a.traits.contains(vpair[2])
+                        a.1.contains(vpair[0]) && a.1.contains(vpair[1]) && a.1.contains(vpair[2])
                     })
-                    .map(|a| a.token_id)
+                    .map(|a| a.0)
                     .collect::<Vec<_>>(),
             );
         }
 
-        for vpair in asset.traits.iter().combinations(4) {
+        for vpair in asset_traits.iter().combinations(4) {
             unique_4.extend(
-                collection
+                collection_filtered
                     .iter()
-                    .filter(|a| a.token_id != asset.token_id)
+                    .filter(|a| a.0 != asset.token_id)
                     .filter(|a| {
-                        a.traits.contains(vpair[0])
-                            && a.traits.contains(vpair[1])
-                            && a.traits.contains(vpair[2])
-                            && a.traits.contains(vpair[3])
+                        a.1.contains(vpair[0])
+                            && a.1.contains(vpair[1])
+                            && a.1.contains(vpair[2])
+                            && a.1.contains(vpair[3])
                     })
-                    .map(|a| a.token_id)
+                    .map(|a| a.0)
                     .collect::<Vec<_>>(),
             );
         }
 
-        for vpair in asset.traits.iter().combinations(5) {
+        for vpair in asset_traits.iter().combinations(5) {
             unique_5.extend(
-                collection
+                collection_filtered
                     .iter()
-                    .filter(|a| a.token_id != asset.token_id)
+                    .filter(|a| a.0 != asset.token_id)
                     .filter(|a| {
-                        a.traits.contains(vpair[0])
-                            && a.traits.contains(vpair[1])
-                            && a.traits.contains(vpair[2])
-                            && a.traits.contains(vpair[3])
-                            && a.traits.contains(vpair[4])
+                        a.1.contains(vpair[0])
+                            && a.1.contains(vpair[1])
+                            && a.1.contains(vpair[2])
+                            && a.1.contains(vpair[3])
+                            && a.1.contains(vpair[4])
                     })
-                    .map(|a| a.token_id)
+                    .map(|a| a.0)
                     .collect::<Vec<_>>(),
             );
         }
@@ -274,6 +308,7 @@ mod tests {
             &mut conn,
             vec![asset1, asset2, asset3],
             "forgottenruneswizardscult",
+            vec!["background".to_string()],
         )
         .await
         .unwrap();

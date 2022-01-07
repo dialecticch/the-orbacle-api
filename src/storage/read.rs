@@ -1,6 +1,6 @@
 use super::*;
 use anyhow::Result;
-use chrono::NaiveDateTime;
+use chrono::{Duration, NaiveDateTime};
 use sqlx::PgConnection;
 
 use std::collections::HashMap;
@@ -42,7 +42,7 @@ pub async fn read_all_collections(conn: &mut PgConnection) -> Result<Vec<String>
 pub async fn read_trait(
     conn: &mut PgConnection,
     collection_slug: &str,
-    trait_name: &str,
+    trait_id: &str,
 ) -> Result<Trait> {
     sqlx::query_as!(
         Trait,
@@ -51,11 +51,11 @@ pub async fn read_trait(
                 * 
             from
                 trait t     
-            where t.collection_slug = $1 and t.trait_name = $2
+            where t.collection_slug = $1 and t.trait_id = $2
             
         "#,
         collection_slug,
-        trait_name,
+        trait_id,
     )
     .fetch_one(&mut *conn)
     .await
@@ -77,13 +77,13 @@ pub async fn read_traits_for_asset(
                     select * from asset where token_id = $1
                 ) as a
                 on
-                    t.trait_name = any(a.traits)
+                    t.trait_id = any(a.traits)
             where t.collection_slug = $2
         "#,
         token_id,
         collection_slug,
     )
-    .map(|r| (r.trait_name, r.trait_count))
+    .map(|r| (r.trait_id, r.trait_count))
     .fetch_all(&mut *conn)
     .await?;
     for (k, v) in vals {
@@ -119,7 +119,7 @@ pub async fn read_asset(
 pub async fn read_assets_with_trait(
     conn: &mut PgConnection,
     collection_slug: &str,
-    trait_name: &str,
+    trait_id: &str,
 ) -> Result<Vec<Asset>> {
     sqlx::query_as!(
         Asset,
@@ -132,7 +132,7 @@ pub async fn read_assets_with_trait(
             
         "#,
         collection_slug,
-        trait_name,
+        trait_id,
     )
     .fetch_all(&mut *conn)
     .await
@@ -165,7 +165,7 @@ pub async fn read_assets_for_owner(
 pub async fn read_sales_for_trait(
     conn: &mut PgConnection,
     collection_slug: &str,
-    trait_name: &str,
+    trait_id: &str,
 ) -> Result<Vec<SaleEvent>> {
     sqlx::query_as!(
         SaleEvent,
@@ -183,7 +183,7 @@ pub async fn read_sales_for_trait(
             )
         "#,
         collection_slug,
-        trait_name,
+        trait_id,
     )
     .fetch_all(&mut *conn)
     .await
@@ -252,7 +252,7 @@ pub async fn read_sales_for_asset(
     .map_err(|e| e.into())
 }
 
-pub async fn read_avg_price_collection_at_ts(
+pub async fn read_30d_avg_price_collection_at_ts(
     conn: &mut PgConnection,
     collection_slug: &str,
     timestamp: &NaiveDateTime,
@@ -263,20 +263,21 @@ pub async fn read_avg_price_collection_at_ts(
                 avg(price) 
             from
                 sale
-            where collection_slug = $1 and timestamp < $2
+            where collection_slug = $1 and timestamp < $2 and timestamp > $3 and price is not null
         "#,
         collection_slug,
         timestamp.timestamp() as i32,
+        (*timestamp - Duration::days(60)).timestamp() as i32,
     )
     .fetch_one(&mut *conn)
     .await?;
     Ok(avg)
 }
 
-pub async fn read_avg_price_trait_at_ts(
+pub async fn read_30d_avg_price_trait_at_ts(
     conn: &mut PgConnection,
     collection_slug: &str,
-    trait_name: &str,
+    trait_id: &str,
     timestamp: &NaiveDateTime,
 ) -> Result<Option<f64>> {
     sqlx::query_scalar!(
@@ -285,17 +286,18 @@ pub async fn read_avg_price_trait_at_ts(
                 avg(price)
             from
                 sale
-            where collection_slug = $1 and timestamp < $2 and token_id = any(
+            where collection_slug = $1 and timestamp < $2 and timestamp > $3 and token_id = any(
                 select
                     token_id
                 from
                     asset a     
-                where a.collection_slug = $1 and  $3 = any(a.traits)
-            )
+                where a.collection_slug = $1 and  $4 = any(a.traits) 
+            ) and price is not null
         "#,
         collection_slug,
         timestamp.timestamp() as i32,
-        trait_name,
+        (*timestamp - Duration::days(60)).timestamp() as i32,
+        trait_id,
     )
     .fetch_one(&mut *conn)
     .await
@@ -396,7 +398,7 @@ pub async fn read_listing_update_type_count_after_ts(
 pub async fn read_trait_listings_at_ts(
     conn: &mut PgConnection,
     collection_slug: &str,
-    trait_name: &str,
+    trait_id: &str,
     ts: i32,
 ) -> Result<Vec<Listing>> {
     sqlx::query_as!(
@@ -414,7 +416,7 @@ pub async fn read_trait_listings_at_ts(
             order by timestamp desc
         "#,
         collection_slug,
-        trait_name,
+        trait_id,
         ts
     )
     .fetch_all(&mut *conn)

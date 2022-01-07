@@ -10,7 +10,7 @@ pub async fn get_value_for_wallet(
     conn: &mut PgConnection,
     collection_slug: &str,
     wallet: &str,
-) -> Result<(f64, HashMap<String, PriceProfile>)> {
+) -> Result<(f64, f64, f64, HashMap<String, PriceProfile>)> {
     let client = OpenseaAPIClient::new(2);
 
     let collection = read_collection(conn, collection_slug).await?;
@@ -24,10 +24,16 @@ pub async fn get_value_for_wallet(
 
     let ids = assets.into_iter().map(|a| a.token_id).collect::<Vec<_>>();
 
-    let mut value = 0f64;
+    let mut value_max = 0f64;
+    let mut value_min = 0f64;
+    let mut value_avg = 0f64;
     let mut map = HashMap::<String, PriceProfile>::new();
     for token_id in ids {
         let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
+
+        if token_traits.is_empty() {
+            continue;
+        }
 
         let rarest_trait = token_traits[0].trait_id.clone();
 
@@ -51,10 +57,12 @@ pub async fn get_value_for_wallet(
         .await
         .unwrap();
 
-        value += profile.custom_price.unwrap_or(profile.max_price);
+        value_max += profile.custom_price.unwrap_or(profile.max_price);
+        value_min += profile.custom_price.unwrap_or(profile.min_price);
+        value_avg += profile.custom_price.unwrap_or(profile.avg_price);
 
         map.insert(token_id.to_string(), profile);
     }
 
-    Ok((value, map))
+    Ok((value_max, value_min, value_avg, map))
 }

@@ -31,10 +31,10 @@ pub async fn get_lowest_sale_count(
 ) -> Result<(String, usize)> {
     let token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
 
-    let mut lowest_frequency = (String::default(), usize::MIN);
+    let mut lowest_frequency = (String::default(), usize::MAX);
     for t in token_traits {
         let frequency = get_sale_count_trait(conn, collection_slug, &t.trait_id, days_back).await?;
-        if frequency > lowest_frequency.1 {
+        if frequency < lowest_frequency.1 {
             lowest_frequency.1 = frequency;
             lowest_frequency.0 = t.trait_id.clone();
         }

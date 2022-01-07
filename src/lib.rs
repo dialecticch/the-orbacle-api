@@ -1,4 +1,5 @@
 extern crate dotenv;
+extern crate num_cpus;
 
 pub mod analyzers;
 pub mod api;

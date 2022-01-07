@@ -71,7 +71,7 @@ dependencies = [
  "async-mutex",
  "blocking",
  "futures-lite",
- "num_cpus",
+ "num_cpus 1.13.0",
  "once_cell",
 ]
 
@@ -170,7 +170,7 @@ dependencies = [
  "kv-log-macro",
  "log",
  "memchr",
- "num_cpus",
+ "num_cpus 1.13.0",
  "once_cell",
  "pin-project-lite",
  "pin-utils",
@@ -553,7 +553,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
 dependencies = [
  "cfg-if",
- "num_cpus",
+ "num_cpus 1.13.0",
 ]
 
 [[package]]
@@ -1219,6 +1219,7 @@ dependencies = [
  "lazy_static",
  "log",
  "nonzero_ext",
+ "num_cpus 0.2.13",
  "reqwest",
  "rweb",
  "serde",
@@ -1280,6 +1281,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_cpus"
+version = "0.2.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cee7e88156f3f9e19bdd598f8d6c9db7bf4078f99f8381f43a55b09648d1a6e3"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -2108,7 +2118,7 @@ dependencies = [
  "libc",
  "memchr",
  "mio",
- "num_cpus",
+ "num_cpus 1.13.0",
  "pin-project-lite",
  "tokio-macros",
  "winapi",

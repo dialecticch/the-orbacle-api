@@ -18,8 +18,8 @@ pub struct NewCollectionBody {
     pub collection_slug: String,
     pub total_supply_expected: usize,
     pub rarity_cutoff_multiplier: f64,
-    pub ignored_trait_types: Vec<String>,
-    pub ignored_trait_values: Vec<String>,
+    pub ignored_trait_types_rarity: Vec<String>,
+    pub ignored_trait_types_overlap: Vec<String>,
 }
 
 #[post("/admin/collection/")]
@@ -46,11 +46,11 @@ pub async fn new_collection(
         &req.collection_slug,
         req.total_supply_expected,
         req.rarity_cutoff_multiplier,
-        req.ignored_trait_types
+        req.ignored_trait_types_rarity
             .into_iter()
             .map(|t| t.to_lowercase())
             .collect(),
-        req.ignored_trait_values,
+        req.ignored_trait_types_overlap,
     )
     .await
     .map_err(internal_error)?;
@@ -62,8 +62,8 @@ async fn _store_collection(
     collection_slug: &str,
     total_supply: usize,
     multiplier: f64,
-    ignored_trait_types: Vec<String>,
-    ignored_trait_values: Vec<String>,
+    ignored_trait_types_rarity: Vec<String>,
+    ignored_trait_types_overlap: Vec<String>,
 ) -> Result<()> {
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(collection_slug).await?;
@@ -89,13 +89,18 @@ async fn _store_collection(
     let traits_filtered: HashSet<Trait> = traits_all
         .into_iter()
         .filter(|t| t.trait_count.is_some())
-        .filter(|t| !ignored_trait_types.contains(&t.trait_type.to_lowercase()))
+        .filter(|t| !ignored_trait_types_rarity.contains(&t.trait_type.to_lowercase()))
         .collect();
 
     let traits: Vec<StorageTrait> = traits_filtered
         .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
+            trait_id: format!(
+                "{}:{}",
+                &t.trait_type.to_lowercase(),
+                &t.value.to_lowercase()
+            ),
             trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
@@ -111,8 +116,8 @@ async fn _store_collection(
         &collection.collection,
         collection_avg_trait_rarity,
         multiplier,
-        ignored_trait_types.clone(),
-        ignored_trait_values,
+        ignored_trait_types_rarity.clone(),
+        ignored_trait_types_overlap.clone(),
     )
     .await
     .unwrap_or_default();
@@ -121,7 +126,13 @@ async fn _store_collection(
 
     println!("  Storing {} assets...", all_assets.len());
 
-    let processed = preprocess::process_assets(conn, all_assets.clone(), collection_slug).await?;
+    let processed = preprocess::process_assets(
+        conn,
+        all_assets.clone(),
+        collection_slug,
+        ignored_trait_types_overlap,
+    )
+    .await?;
 
     for a in &processed {
         write_asset(conn, a).await.unwrap();
@@ -200,8 +211,8 @@ pub async fn update_collection(
         &mut conn,
         &req.collection_slug,
         req.rarity_cutoff_multiplier,
-        req.ignored_trait_types,
-        req.ignored_trait_values,
+        req.ignored_trait_types_rarity,
+        req.ignored_trait_types_overlap,
     )
     .await
     .map_err(internal_error)?;
@@ -212,8 +223,8 @@ async fn _update_collection(
     conn: &mut PgConnection,
     collection_slug: &str,
     multiplier: f64,
-    ignored_trait_types: Vec<String>,
-    ignored_trait_values: Vec<String>,
+    ignored_trait_types_rarity: Vec<String>,
+    ignored_trait_types_overlap: Vec<String>,
 ) -> Result<()> {
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(collection_slug).await?;
@@ -241,7 +252,7 @@ async fn _update_collection(
     let traits_filtered: HashSet<Trait> = traits_all
         .into_iter()
         .filter(|t| t.trait_count.is_some())
-        .filter(|t| !ignored_trait_types.contains(&t.trait_type.to_lowercase()))
+        .filter(|t| !ignored_trait_types_rarity.contains(&t.trait_type.to_lowercase()))
         .collect();
     println!("{:?}", traits_filtered.len());
 
@@ -249,6 +260,11 @@ async fn _update_collection(
         .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
+            trait_id: format!(
+                "{}:{}",
+                &t.trait_type.to_lowercase(),
+                &t.value.to_lowercase()
+            ),
             trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
@@ -261,8 +277,8 @@ async fn _update_collection(
         conn,
         &collection.collection.slug,
         total_supply,
-        ignored_trait_types,
-        ignored_trait_values,
+        ignored_trait_types_rarity,
+        ignored_trait_types_overlap,
         (collection_avg_trait_rarity * multiplier) / total_supply,
     )
     .await

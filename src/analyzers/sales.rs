@@ -75,7 +75,7 @@ pub async fn get_average_collection_sales_at_ts(
     collection_slug: &str,
     ts: &NaiveDateTime,
 ) -> Result<Option<f64>> {
-    read_avg_price_collection_at_ts(conn, collection_slug, ts).await
+    read_30d_avg_price_collection_at_ts(conn, collection_slug, ts).await
 }
 
 pub async fn get_average_trait_sales_at_ts(
@@ -84,5 +84,5 @@ pub async fn get_average_trait_sales_at_ts(
     trait_name: &str,
     ts: &NaiveDateTime,
 ) -> Result<Option<f64>> {
-    read_avg_price_trait_at_ts(conn, collection_slug, trait_name, ts).await
+    read_30d_avg_price_trait_at_ts(conn, collection_slug, trait_name, ts).await
 }

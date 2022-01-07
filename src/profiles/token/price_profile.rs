@@ -72,10 +72,7 @@ impl PriceProfile {
 
         let mut prices = vec![
             collection_floor,
-            f64::max(
-                last_sale.clone().unwrap_or_default().price,
-                collection_floor,
-            ),
+            last_sale.clone().unwrap_or_default().price,
             most_rare_trait_floor.unwrap_or(0f64),
             most_valued_trait_floor.unwrap_or(0f64),
             rarity_weighted_floor.unwrap_or(0f64),
@@ -91,9 +88,9 @@ impl PriceProfile {
         let max_price = prices[0];
 
         prices.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let min_price = prices[0];
+        let min_price = f64::max(prices[0], collection_floor);
 
-        let avg_price = prices.iter().sum::<f64>() / prices.len() as f64;
+        let avg_price = (max_price + min_price) / 2f64;
 
         Ok(Self {
             collection_floor,

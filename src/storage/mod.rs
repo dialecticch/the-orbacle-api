@@ -6,6 +6,7 @@ pub mod write;
 #[derive(serde::Serialize, Debug)]
 pub struct Trait {
     pub collection_slug: String,
+    pub trait_id: String,
     pub trait_type: String,
     pub trait_name: String,
     pub trait_count: i32,
@@ -35,8 +36,8 @@ pub struct Collection {
     pub total_supply: i32,
     pub floor_price: f64,
     pub rarity_cutoff: f64,
-    pub ignored_trait_types: Vec<String>,
-    pub ignored_trait_values: Vec<String>,
+    pub ignored_trait_types_rarity: Vec<String>,
+    pub ignored_trait_types_overlap: Vec<String>,
     pub banner_image_url: String,
     pub daily_volume: f64,
     pub daily_sales: f64,

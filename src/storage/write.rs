@@ -50,8 +50,8 @@ pub async fn write_collection(
     collection: &Collection,
     avg_trait_rarity: f64,
     multiplier: f64,
-    ignored_trait_types: Vec<String>,
-    ignored_trait_values: Vec<String>,
+    ignored_trait_types_rarity: Vec<String>,
+    ignored_trait_types_overlap: Vec<String>,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
@@ -59,8 +59,8 @@ pub async fn write_collection(
             slug,
             name,
             address,
-            ignored_trait_types,
-            ignored_trait_values,
+            ignored_trait_types_rarity,
+            ignored_trait_types_overlap,
             total_supply,
             rarity_cutoff,
             floor_price,
@@ -79,8 +79,8 @@ pub async fn write_collection(
         collection.slug.to_lowercase(),
         collection.name.clone().unwrap_or_default(),
         collection.primary_asset_contracts[0].address.to_lowercase(),
-        &ignored_trait_types,
-        &ignored_trait_values,
+        &ignored_trait_types_rarity,
+        &ignored_trait_types_overlap,
         collection.stats.total_supply as i32,
         (avg_trait_rarity * multiplier) / collection.stats.total_supply,
         collection.stats.floor_price,
@@ -122,22 +122,22 @@ pub async fn update_collection_info(
     conn: &mut PgConnection,
     collection_slug: &str,
     total_supply: f64,
-    ignored_trait_types: Vec<String>,
-    ignored_trait_values: Vec<String>,
+    ignored_trait_types_rarity: Vec<String>,
+    ignored_trait_types_overlap: Vec<String>,
     rarity_cutoff: f64,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
         update collection
             set
-            ignored_trait_types = $1,
-            ignored_trait_values = $2,
+            ignored_trait_types_rarity = $1,
+            ignored_trait_types_overlap = $2,
             rarity_cutoff = $3,
             total_supply = $4
         where slug= $5
        "#,
-        &ignored_trait_types,
-        &ignored_trait_values,
+        &ignored_trait_types_rarity,
+        &ignored_trait_types_overlap,
         rarity_cutoff,
         total_supply as i32,
         collection_slug
@@ -155,14 +155,16 @@ pub async fn write_traits(conn: &mut PgConnection, traits: Vec<super::Trait>) ->
             r#"
         insert into trait(
                collection_slug,
+               trait_id,
                trait_type,
                trait_name,
                trait_count
         )
         values
-            ($1, $2, $3, $4)
+            ($1, $2, $3, $4, $5)
         "#,
             t.collection_slug,
+            t.trait_id,
             t.trait_type,
             t.trait_name,
             t.trait_count
@@ -194,14 +196,16 @@ pub async fn update_traits(
             r#"
         insert into trait(
                collection_slug,
+               trait_id,
                trait_type,
                trait_name,
                trait_count
         )
         values
-            ($1, $2, $3, $4)
+            ($1, $2, $3, $4, $5)
         "#,
             t.collection_slug,
+            t.trait_id,
             t.trait_type,
             t.trait_name,
             t.trait_count
