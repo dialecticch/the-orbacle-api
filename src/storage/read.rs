@@ -221,7 +221,7 @@ pub async fn read_highest_sale_for_collection(
                 from
                     sale
                 where collection_slug = $1 
-                group by token_id, price order by price desc
+                group by price,token_id order by price desc
             "#,
         collection_slug,
     )

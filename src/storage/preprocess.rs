@@ -158,7 +158,7 @@ mod tests {
         let asset1 = OpenseaAsset {
             name: Some(String::from("Test")),
             asset_contract: AssetContract::default(),
-            token_id: 1u64,
+            token_id: 1i32,
             image_url: String::from("Test"),
             sell_orders: None,
             traits: Some(vec![
@@ -196,7 +196,7 @@ mod tests {
         let asset2 = OpenseaAsset {
             name: Some(String::from("Test")),
             asset_contract: AssetContract::default(),
-            token_id: 2u64,
+            token_id: 2i32,
             image_url: String::from("Test"),
             sell_orders: None,
             traits: Some(vec![
@@ -234,7 +234,7 @@ mod tests {
         let asset3 = OpenseaAsset {
             name: Some(String::from("Test")),
             asset_contract: AssetContract::default(),
-            token_id: 2u64,
+            token_id: 3i32,
             image_url: String::from("Test"),
             sell_orders: None,
             traits: Some(vec![

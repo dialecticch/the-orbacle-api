@@ -1,4 +1,4 @@
-use crate::analyzers::rarities::get_trait_rarities;
+use crate::analyzers::{prices::get_most_valued_trait_floor, rarities::get_trait_rarities};
 use crate::opensea::{types::AssetsRequest, OpenseaAPIClient};
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::storage::read::read_collection;
@@ -27,17 +27,25 @@ pub async fn get_value_for_wallet(
     let mut value = 0f64;
     let mut map = HashMap::<String, PriceProfile>::new();
     for token_id in ids {
-        let token_traits = get_trait_rarities(conn, &collection.slug, token_id as i32)
-            .await
-            .unwrap()
-            .into_iter()
-            .collect::<Vec<_>>();
+        let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
+
+        let rarest_trait = token_traits[0].trait_id.clone();
+
+        let most_valuable_trait = get_most_valued_trait_floor(
+            conn,
+            &collection_slug,
+            token_traits.clone(),
+            collection.rarity_cutoff,
+        )
+        .await?;
 
         let profile = PriceProfile::make(
             conn,
             &collection.slug,
             token_id as i32,
             token_traits,
+            &rarest_trait,
+            &most_valuable_trait,
             collection.rarity_cutoff,
         )
         .await

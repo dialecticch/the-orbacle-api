@@ -125,7 +125,7 @@ impl Default for AssetContract {
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct EmbeddedAsset {
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub token_id: u64,
+    pub token_id: i32,
     num_sales: u64,
     pub name: Option<String>,
     description: Option<String>,
@@ -139,7 +139,7 @@ pub struct EmbeddedAsset {
 pub struct Asset {
     pub name: Option<String>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub token_id: u64,
+    pub token_id: i32,
     pub image_url: String,
     pub asset_contract: AssetContract,
     pub sell_orders: Option<Vec<SellOrder>>,
@@ -155,7 +155,7 @@ pub struct AssetsResponse {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct AssetStub {
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub token_id: u64,
+    pub token_id: i32,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

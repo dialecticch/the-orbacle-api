@@ -1,3 +1,4 @@
+use super::*;
 use crate::from_wei;
 use crate::storage::read::*;
 use anyhow::Result;
@@ -7,12 +8,15 @@ pub async fn get_token_listings(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_ids: Vec<i32>,
-) -> Result<Vec<(i32, Option<f64>)>> {
-    let mut map: Vec<(i32, Option<f64>)> = Vec::new();
+) -> Result<Vec<TokenListing>> {
+    let mut map: Vec<TokenListing> = Vec::new();
     for id in token_ids {
         let listing = read_latests_listing_for_asset(conn, collection_slug, id).await?;
 
-        map.push((id, listing[0].price));
+        map.push(TokenListing {
+            token_id: id,
+            price: listing[0].price,
+        });
     }
 
     Ok(map)
@@ -21,7 +25,7 @@ pub async fn get_trait_listings(
     conn: &mut PgConnection,
     collection_slug: &str,
     trait_name: &str,
-) -> Result<Vec<(i32, f64)>> {
+) -> Result<Vec<TraitListing>> {
     let assets_with_trait = read_assets_with_trait(conn, collection_slug, trait_name)
         .await
         .unwrap();
@@ -32,14 +36,17 @@ pub async fn get_trait_listings(
 
     all_assets = all_assets
         .into_iter()
-        .filter(|a| a.1.is_some())
+        .filter(|a| a.price.is_some())
         .collect::<Vec<_>>();
 
-    all_assets.sort_by(|a, b| a.1.unwrap().partial_cmp(&b.1.unwrap()).unwrap());
+    all_assets.sort_by(|a, b| a.price.unwrap().partial_cmp(&b.price.unwrap()).unwrap());
 
     Ok(all_assets
         .into_iter()
-        .map(|t| (t.0 as i32, from_wei(t.1.unwrap())))
+        .map(|t| TraitListing {
+            token_id: t.token_id,
+            price: from_wei(t.price.unwrap()),
+        })
         .collect())
 }
 

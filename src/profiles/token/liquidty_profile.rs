@@ -1,7 +1,5 @@
 use crate::analyzers::listings::*;
-use crate::analyzers::prices::*;
 use crate::analyzers::velocity::*;
-use crate::storage::read::read_assets_with_trait;
 use crate::storage::read::read_trait;
 use anyhow::Result;
 use sqlx::PgConnection;
@@ -10,10 +8,10 @@ use sqlx::PgConnection;
 pub struct LiquidityProfile {
     pub rarest_trait_nr_listed: (usize, usize),
     pub mvt_nr_listed: (usize, usize),
-    pub rarest_trait_sale_frequency_30d: f64,
-    pub mvt_sale_frequency_30d: f64,
-    pub lowest_sale_frequency_30d: f64,
-    pub avg_sale_frequency_30d: f64,
+    pub rarest_trait_sale_count: usize,
+    pub mvt_sale_count: usize,
+    pub lowest_trait_sales: usize,
+    pub avg_sale_count: f64,
 }
 
 impl LiquidityProfile {
@@ -21,71 +19,43 @@ impl LiquidityProfile {
         conn: &mut PgConnection,
         collection_slug: &str,
         token_id: i32,
-        token_traits: Vec<(String, f64)>,
-        cutoff: f64,
+        rarest_trait: &str,
+        most_valuable_trait: &Option<String>,
     ) -> Result<Self> {
-        log::info!("Getting rarest_trait");
-        let rarest_trait = get_rarest_trait_floor(conn, collection_slug, token_traits.clone())
+        let rarest_trait_count = read_trait(conn, collection_slug, &rarest_trait)
             .await?
-            .0;
-
-        let rarest_trait_count = read_assets_with_trait(conn, collection_slug, &rarest_trait)
-            .await?
-            .len();
-
-        log::info!("Getting most_valuable_trait_resp");
-        let most_valuable_trait_resp =
-            get_most_valued_trait_floor(conn, collection_slug, token_traits.clone(), cutoff)
-                .await?;
-
-        log::info!("Getting most_valued_trait_floor");
-        let most_valued_trait = most_valuable_trait_resp.0;
-
-        let mvt_trait_count = match most_valued_trait.clone() {
-            Some(t) => read_trait(conn, collection_slug, &t).await?.trait_count,
-            None => 0,
-        };
+            .trait_count;
 
         log::info!("Getting rarest_trait_nr_listed");
         let rarest_trait_nr_listed =
             get_trait_nr_listed(conn, collection_slug, &rarest_trait.clone()).await?;
 
-        log::info!("Getting mvt_nr_listed");
-        let mvt_nr_listed = get_trait_nr_listed(
-            conn,
-            collection_slug,
-            &most_valued_trait.clone().unwrap_or_default(),
-        )
-        .await?;
+        let (mvt_trait_count, mvt_nr_listed, mvt_sale_count) = match most_valuable_trait.clone() {
+            Some(t) => (
+                read_trait(conn, collection_slug, &t).await?.trait_count,
+                get_trait_nr_listed(conn, collection_slug, &t).await?,
+                get_sale_count_trait(conn, collection_slug, &t, 60).await?,
+            ),
+            None => (0, 0, 0),
+        };
 
-        log::info!("Getting avg_sale_frequency_30d");
-        let avg_sale_frequency_30d =
-            get_avg_sale_frequency(conn, collection_slug, token_id, 60).await?;
+        log::info!("Getting avg_sale_count_30d");
+        let avg_sale_count = get_avg_sale_count(conn, collection_slug, token_id, 60).await?;
 
-        log::info!("Getting lowest_sale_frequency_30d");
-        let lowest_sale_frequency_30d =
-            get_lowest_sale_frequency(conn, collection_slug, token_id, 60).await?;
+        log::info!("Getting lowest_trait_sales");
+        let lowest_trait_sales = get_lowest_sale_count(conn, collection_slug, token_id, 60).await?;
 
-        log::info!("Getting mvt_sale_frequency_30d");
-        let mvt_sale_frequency_30d = get_sale_frequency_trait(
-            conn,
-            collection_slug,
-            &most_valued_trait.clone().unwrap_or_default(),
-            60,
-        )
-        .await?;
-
-        log::info!("Getting rarest_trait_sale_frequency_30d");
-        let rarest_trait_sale_frequency_30d =
-            get_sale_frequency_trait(conn, collection_slug, &rarest_trait.clone(), 60).await?;
+        log::info!("Getting rarest_trait_sale_count");
+        let rarest_trait_sale_count =
+            get_sale_count_trait(conn, collection_slug, &rarest_trait.clone(), 60).await?;
 
         Ok(Self {
             rarest_trait_nr_listed: (rarest_trait_nr_listed, rarest_trait_count as usize),
             mvt_nr_listed: (mvt_nr_listed, mvt_trait_count as usize),
-            lowest_sale_frequency_30d: lowest_sale_frequency_30d.1,
-            rarest_trait_sale_frequency_30d,
-            avg_sale_frequency_30d,
-            mvt_sale_frequency_30d,
+            lowest_trait_sales: lowest_trait_sales.1,
+            rarest_trait_sale_count,
+            avg_sale_count,
+            mvt_sale_count,
         })
     }
 }

@@ -3,6 +3,7 @@ use super::{
     price_profile::PriceProfile, rarity_profile::RarityProfile,
 };
 use crate::analyzers::listings::*;
+use crate::analyzers::prices::get_most_valued_trait_floor;
 use crate::analyzers::rarities::get_trait_rarities;
 use crate::from_wei;
 use crate::storage::read::read_asset;
@@ -44,9 +45,20 @@ impl TokenProfile {
         let collection_address = collection.address;
 
         log::info!("Getting listing_price");
-        let listing_price = get_token_listings(conn, &collection_slug, vec![token_id]).await?[0].1;
+        let listing_price =
+            get_token_listings(conn, &collection_slug, vec![token_id]).await?[0].price;
 
         let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
+
+        let rarest_trait = token_traits[0].trait_id.clone();
+
+        let most_valuable_trait = get_most_valued_trait_floor(
+            conn,
+            &collection_slug,
+            token_traits.clone(),
+            collection.rarity_cutoff,
+        )
+        .await?;
 
         Ok(Self {
             opensea: format!(
@@ -68,6 +80,8 @@ impl TokenProfile {
                 &collection_slug,
                 token_id,
                 token_traits.clone(),
+                &rarest_trait,
+                &most_valuable_trait,
                 collection.rarity_cutoff,
             )
             .await?,
@@ -76,16 +90,16 @@ impl TokenProfile {
                 conn,
                 &collection_slug,
                 token_id,
-                token_traits.clone(),
-                collection.rarity_cutoff,
+                &rarest_trait,
+                &most_valuable_trait.clone().map(|t| t.trait_id),
             )
             .await?,
             rarity_profile: RarityProfile::make(
                 conn,
                 &collection_slug,
                 token_id,
-                token_traits.clone(),
-                collection.rarity_cutoff,
+                &rarest_trait,
+                &most_valuable_trait.clone().map(|t| t.trait_id),
             )
             .await?,
         })

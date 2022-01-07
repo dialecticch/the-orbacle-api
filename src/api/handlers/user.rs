@@ -1,4 +1,5 @@
 use super::super::errors::internal_error;
+use crate::analyzers::prices::get_most_valued_trait_floor;
 use crate::analyzers::rarities::get_trait_rarities;
 use crate::profiles::token::collection_profile::CollectionProfile;
 use crate::profiles::token::price_profile::PriceProfile;
@@ -77,19 +78,27 @@ async fn _get_price_profile(
     collection_slug: String,
     token_id: i32,
 ) -> Result<PriceProfile> {
-    let token_traits = get_trait_rarities(conn, &collection_slug.to_string(), token_id)
-        .await
-        .unwrap()
-        .into_iter()
-        .collect::<Vec<_>>();
-
     let collection = read_collection(conn, &collection_slug).await?;
+
+    let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
+
+    let rarest_trait = token_traits[0].trait_id.clone();
+
+    let most_valuable_trait = get_most_valued_trait_floor(
+        conn,
+        &collection_slug,
+        token_traits.clone(),
+        collection.rarity_cutoff,
+    )
+    .await?;
 
     PriceProfile::make(
         conn,
         &collection_slug.to_string(),
         token_id,
         token_traits,
+        &rarest_trait,
+        &most_valuable_trait,
         collection.rarity_cutoff,
     )
     .await

@@ -1,3 +1,4 @@
+use super::*;
 use crate::storage::read::*;
 use crate::storage::Trait;
 use anyhow::Result;
@@ -7,7 +8,7 @@ pub async fn get_trait_rarities(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_id: i32,
-) -> Result<Vec<(String, f64)>> {
+) -> Result<Vec<TraitRarities>> {
     let collection = read_collection(conn, collection_slug).await?;
     let traits = read_traits_for_asset(conn, collection_slug, token_id).await?;
     let mut traits_vec: Vec<(String, i32)> = traits.into_iter().collect();
@@ -15,7 +16,10 @@ pub async fn get_trait_rarities(
 
     Ok(traits_vec
         .into_iter()
-        .map(|(t, c)| (t, c as f64 / collection.total_supply as f64))
+        .map(|(t, c)| TraitRarities {
+            trait_id: t,
+            rarity: c as f64 / collection.total_supply as f64,
+        })
         .collect())
 }
 

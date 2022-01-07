@@ -1,3 +1,4 @@
+use super::*;
 use crate::from_wei;
 use crate::storage::read::*;
 use anyhow::Result;
@@ -8,7 +9,7 @@ pub async fn get_trait_sales(
     conn: &mut PgConnection,
     collection_slug: &str,
     trait_name: &str,
-) -> Result<Vec<(i32, f64, NaiveDateTime)>> {
+) -> Result<Vec<TokenSale>> {
     let mut all_sales = read_sales_for_trait(conn, collection_slug, trait_name)
         .await
         .unwrap();
@@ -17,12 +18,10 @@ pub async fn get_trait_sales(
 
     Ok(all_sales
         .into_iter()
-        .map(|t| {
-            (
-                t.token_id as i32,
-                from_wei(t.price),
-                NaiveDateTime::from_timestamp(t.timestamp as i64, 0),
-            )
+        .map(|t| TokenSale {
+            token_id: t.token_id as i32,
+            time: NaiveDateTime::from_timestamp(t.timestamp as i64, 0),
+            price: from_wei(t.price),
         })
         .collect())
 }
@@ -31,7 +30,7 @@ pub async fn get_asset_sales(
     conn: &mut PgConnection,
     collection_slug: &str,
     token_id: i32,
-) -> Result<Vec<(i32, f64, NaiveDateTime)>> {
+) -> Result<Vec<TokenSale>> {
     let mut all_sales = read_sales_for_asset(conn, collection_slug, token_id)
         .await
         .unwrap();
@@ -40,12 +39,10 @@ pub async fn get_asset_sales(
 
     Ok(all_sales
         .into_iter()
-        .map(|t| {
-            (
-                t.token_id as i32,
-                from_wei(t.price),
-                NaiveDateTime::from_timestamp(t.timestamp as i64, 0),
-            )
+        .map(|t| TokenSale {
+            token_id: t.token_id as i32,
+            time: NaiveDateTime::from_timestamp(t.timestamp as i64, 0),
+            price: from_wei(t.price),
         })
         .collect())
 }
@@ -66,7 +63,7 @@ pub async fn get_average_trait_sales_nr(
             sale_history
                 .iter()
                 .skip(sale_history.len() - count)
-                .map(|s| s.1)
+                .map(|s| s.price)
                 .sum::<f64>()
                 / count as f64,
         ))

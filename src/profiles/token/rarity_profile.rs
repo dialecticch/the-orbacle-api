@@ -1,4 +1,3 @@
-use crate::analyzers::prices::*;
 use crate::storage::read::read_asset;
 use anyhow::Result;
 use sqlx::PgConnection;
@@ -20,27 +19,15 @@ impl RarityProfile {
         conn: &mut PgConnection,
         collection_slug: &str,
         token_id: i32,
-        token_traits: Vec<(String, f64)>,
-        cutoff: f64,
+        rarest_trait: &str,
+        most_valued_trait: &Option<String>,
     ) -> Result<Self> {
         log::info!("Getting asset");
         let asset = read_asset(conn, collection_slug, token_id).await?;
 
-        log::info!("Getting rarest_trait");
-        let rarest_trait = get_rarest_trait_floor(conn, collection_slug, token_traits.clone())
-            .await?
-            .0;
-
-        log::info!("Getting most_valuable_trait_resp");
-        let most_valuable_trait_resp =
-            get_most_valued_trait_floor(conn, collection_slug, token_traits, cutoff).await?;
-
-        log::info!("Getting most_valued_trait_floor");
-        let most_valued_trait = most_valuable_trait_resp.0;
-
         Ok(Self {
-            rarest_trait,
-            most_valued_trait,
+            rarest_trait: rarest_trait.into(),
+            most_valued_trait: most_valued_trait.clone(),
             unique_traits: asset.unique_traits,
             traits_3_combination_overlap: asset.traits_3_combination_overlap,
             traits_4_combination_overlap: asset.traits_4_combination_overlap,
