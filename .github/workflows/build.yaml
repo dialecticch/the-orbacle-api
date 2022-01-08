@@ -1,0 +1,84 @@
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+
+name: Build docker image
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
+        continue-on-error: true
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_TOKEN }}
+
+      - name: Install sqlx-cli
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: sqlx-cli --no-default-features --features postgres,rustls
+
+      - name: Run migrations
+        uses: actions-rs/cargo@v1
+        with:
+          command: sqlx
+          args: migrate run
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost/postgres
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost/postgres
+
+      - name: Copy binary files
+        run: mkdir bins && cp target/release/spektr-api ./bins/
+
+      - name: Build and Push (git tag)
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DO_TOKEN }}
+          password: ${{ secrets.DO_TOKEN }}
+          push: true
+          registry: registry.digitalocean.com
+          repository: sovreign/the-orbacle-api
+          tags: latest
+
+      # yeah, this is ugly, I know.
+      - name: Force App Rebuild on Digital Ocean (latest)
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: doctl apps create-deployment `doctl apps list -o json | jq -r '.[] | select(.spec.name=="prod-the-orbacle-api") | .id'` --force-rebuild
