@@ -1200,36 +1200,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nft-pricer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "backoff",
- "cached",
- "chrono",
- "clap",
- "derive_more",
- "dotenv",
- "futures",
- "governor",
- "hyper",
- "hyper-rustls",
- "itertools",
- "lazy_static",
- "log",
- "nonzero_ext",
- "num_cpus 0.2.13",
- "reqwest",
- "rweb",
- "serde",
- "serde-aux",
- "serde_json",
- "sqlx",
- "tokio",
-]
-
-[[package]]
 name = "no-std-compat"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2061,6 +2031,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
 dependencies = [
  "unicode-width",
+]
+
+[[package]]
+name = "the-orbacle"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "backoff",
+ "cached",
+ "chrono",
+ "clap",
+ "derive_more",
+ "dotenv",
+ "futures",
+ "governor",
+ "hyper",
+ "hyper-rustls",
+ "itertools",
+ "lazy_static",
+ "log",
+ "nonzero_ext",
+ "num_cpus 0.2.13",
+ "reqwest",
+ "rweb",
+ "serde",
+ "serde-aux",
+ "serde_json",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]
