@@ -65,7 +65,7 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost/postgres
 
       - name: Copy binary files
-        run: mkdir bins && cp target/release/spektr-api ./bins/
+        run: mkdir bins && cp target/release/the-orbacle ./bins/
 
       - name: Build and Push (git tag)
         if: ${{ github.ref == 'refs/heads/main' }}
