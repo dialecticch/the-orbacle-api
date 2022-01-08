@@ -4,7 +4,7 @@ on:
     branches:
       - develop
 
-name: Build docker image
+name: build-push docker image
 jobs:
   build:
     name: Build
