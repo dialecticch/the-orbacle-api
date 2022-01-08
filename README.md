@@ -1,6 +1,6 @@
-# nft-pricer
+# The Orbacle
 
-Multiple pricing strategies for NFTs
+Multiple pricing strategies for NFTs.
 
 ## Usage
 
