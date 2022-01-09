@@ -70,6 +70,17 @@ impl TokenProfile {
         )
         .await?;
 
+        let price_profile = PriceProfile::make(
+            conn,
+            &collection_slug,
+            token_id,
+            token_traits.clone(),
+            &rarest_trait,
+            &most_valuable_trait,
+            collection.rarity_cutoff,
+        )
+        .await?;
+
         Ok(Self {
             opensea: format!(
                 "https://opensea.io/assets/{}/{}",
@@ -86,25 +97,17 @@ impl TokenProfile {
             owner_tokens_in_collection: read_assets_for_owner(conn, &collection_slug, &asset.owner)
                 .await?
                 .unwrap_or_default() as i32,
-            price_profile: PriceProfile::make(
-                conn,
-                &collection_slug,
-                token_id,
-                token_traits.clone(),
-                &rarest_trait,
-                &most_valuable_trait,
-                collection.rarity_cutoff,
-            )
-            .await?,
-            collection_profile: CollectionProfile::make(conn, &collection_slug).await?,
             liquidity_profile: LiquidityProfile::make(
                 conn,
                 &collection_slug,
                 token_id,
                 &rarest_trait,
+                price_profile.max_price,
                 &most_valuable_trait.clone().map(|t| t.trait_id),
             )
             .await?,
+            price_profile,
+            collection_profile: CollectionProfile::make(conn, &collection_slug).await?,
             rarity_profile: RarityProfile::make(
                 conn,
                 &collection_slug,

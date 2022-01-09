@@ -230,6 +230,32 @@ pub async fn read_highest_sale_for_collection(
     .map_err(|e| e.into())
 }
 
+pub async fn read_sales_for_collection_above_price_after_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    price: f64,
+    timestamp: &NaiveDateTime,
+) -> Result<Vec<SaleEvent>> {
+    println!("{:?}", price);
+    sqlx::query_as!(
+        SaleEvent,
+        r#"
+                select
+                    *
+                from
+                    sale
+                where collection_slug = $1 and price > $2 and timestamp > $3
+                order by price asc
+            "#,
+        collection_slug,
+        price * 10f64.powf(18f64),
+        timestamp.timestamp() as i32,
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 pub async fn read_sales_for_asset(
     conn: &mut PgConnection,
     collection_slug: &str,
