@@ -423,3 +423,30 @@ pub async fn read_trait_listings_at_ts(
     .await
     .map_err(|e| e.into())
 }
+
+pub async fn read_listings_token_after_ts(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_id: i32,
+    timestamp: &NaiveDateTime,
+) -> Result<Vec<Listing>> {
+    sqlx::query_as!(
+        Listing,
+        r#"
+            select
+                *
+            from
+                listing
+            where collection_slug = $1 and token_id = $2 and timestamp > $3 and (
+                update_type = 'created' or  (update_type = 'sell_order' and price is not null)
+            )
+            order by token_id, timestamp
+        "#,
+        collection_slug,
+        token_id,
+        timestamp.timestamp() as i32,
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}

@@ -176,7 +176,7 @@ async fn _store_collection(
     fetch_collection_listings(
         conn,
         collection_slug,
-        &(now - Duration::days(14)).naive_utc(),
+        &(now - Duration::days(30)).naive_utc(),
     )
     .await
     .unwrap();

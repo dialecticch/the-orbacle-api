@@ -6,10 +6,10 @@ use crate::analyzers::listings::*;
 use crate::analyzers::prices::get_most_valued_trait_floor;
 use crate::analyzers::rarities::get_trait_rarities;
 use crate::from_wei;
-use crate::storage::read::read_asset;
-use crate::storage::read::read_assets_for_owner;
+use crate::storage::read::{read_asset, read_assets_for_owner, read_listings_token_after_ts};
 use crate::storage::Collection;
 use anyhow::Result;
+use chrono::{Duration, Utc};
 use sqlx::PgConnection;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
@@ -22,7 +22,8 @@ pub struct TokenProfile {
     pub token_id: i32,
     pub image_url: String,
     pub listing_price: Option<f64>,
-    pub owner_tokens_in_collection: i64,
+    pub nr_listings_30d: i32,
+    pub owner_tokens_in_collection: i32,
     pub collection_profile: CollectionProfile,
     pub price_profile: PriceProfile,
     pub liquidity_profile: LiquidityProfile,
@@ -48,6 +49,15 @@ impl TokenProfile {
         let listing_price =
             get_token_listings(conn, &collection_slug, vec![token_id]).await?[0].price;
 
+        let nr_listings_30d = read_listings_token_after_ts(
+            conn,
+            &collection_slug,
+            token_id,
+            &(Utc::now() - Duration::days(30)).naive_utc(),
+        )
+        .await?
+        .len() as i32;
+
         let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
 
         let rarest_trait = token_traits[0].trait_id.clone();
@@ -72,9 +82,10 @@ impl TokenProfile {
             token_id,
             image_url: asset.image_url,
             listing_price: listing_price.map(from_wei),
+            nr_listings_30d,
             owner_tokens_in_collection: read_assets_for_owner(conn, &collection_slug, &asset.owner)
                 .await?
-                .unwrap_or_default(),
+                .unwrap_or_default() as i32,
             price_profile: PriceProfile::make(
                 conn,
                 &collection_slug,
