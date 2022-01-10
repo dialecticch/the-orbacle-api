@@ -1,4 +1,4 @@
-# The Orbacle
+# The Orbacle: API/Backend
 
 Multiple pricing strategies for NFTs.
 
