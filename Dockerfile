@@ -9,6 +9,6 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./bins/the-orbacle /app/bin/the-orbacle
-COPY ./migrations /app/bin/migrations
+COPY ./migrations /app/migrations
 
 CMD ["the-orbacle"]
