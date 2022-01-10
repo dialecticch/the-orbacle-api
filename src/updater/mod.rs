@@ -22,7 +22,8 @@ pub async fn fetch_collection_listings(
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
         .event_type("cancelled")
-        .occurred_after(&occurred_after.to_string())
+        .occurred_after(&occurred_after)
+        .chunk_size(7)
         .build();
 
     let cancelled = client.get_events(req).await.unwrap();
@@ -49,7 +50,8 @@ pub async fn fetch_collection_listings(
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
         .event_type("successful")
-        .occurred_after(&occurred_after.to_string())
+        .occurred_after(&occurred_after)
+        .chunk_size(7)
         .build();
 
     let filled = client.get_events(req).await.unwrap();
@@ -76,7 +78,8 @@ pub async fn fetch_collection_listings(
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
         .event_type("created")
-        .occurred_after(&occurred_after.to_string())
+        .occurred_after(&occurred_after)
+        .chunk_size(7)
         .build();
 
     let created = client.get_events(req).await.unwrap();
@@ -110,18 +113,21 @@ pub async fn fetch_collection_sales(
 ) -> Result<()> {
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
+    println!("{:?}", occurred_after);
+
     let client = OpenseaAPIClient::new(1);
 
     let req = match occurred_after {
         Some(t) => EventsRequest::new()
             .asset_contract_address(&collection.address)
             .event_type("successful")
-            .occurred_after(&t.to_string())
+            .chunk_size(7)
+            .occurred_after(&t)
             .build(),
         None => EventsRequest::new()
             .asset_contract_address(&collection.address)
             .event_type("successful")
-            .expected(10000)
+            .chunk_size(7)
             .build(),
     };
 

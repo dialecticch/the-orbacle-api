@@ -15,7 +15,8 @@ use std::num::NonZeroU32;
 
 use backoff::future::retry;
 use backoff::ExponentialBackoff;
-use std::time::Duration;
+
+use chrono::{Duration, NaiveDateTime, Utc};
 
 pub mod types;
 
@@ -58,7 +59,7 @@ impl OpenseaAPIClient {
     {
         self.rate_limiter.until_ready().await;
         let backoff = ExponentialBackoff {
-            max_elapsed_time: Some(Duration::from_secs(60)),
+            max_elapsed_time: Some(std::time::Duration::from_secs(60)),
             ..Default::default()
         };
 
@@ -146,7 +147,7 @@ impl OpenseaAPIClient {
 
     async fn get_assets_parallel(&self, req: AssetsRequest) -> Result<Vec<Asset>> {
         let mut req = req;
-        let wanted = req.limit.unwrap_or_else(|| req.expected.unwrap_or(1000));
+        let wanted = req.limit.unwrap_or_else(|| req.expected.unwrap_or(10000));
         req.limit = Some(usize::min(wanted, 50));
 
         let mut stream = futures::stream::iter(0..wanted / req.limit.unwrap())
@@ -177,11 +178,11 @@ impl OpenseaAPIClient {
 
     async fn get_events_serial(&self, req: EventsRequest) -> Result<Vec<Event>> {
         let mut req = req;
-        let wanted = req.limit.unwrap_or(10000);
-        req.limit = Some(usize::min(wanted, 50));
+
+        req.limit = Some(50);
 
         let mut results = vec![];
-        while results.len() < wanted {
+        loop {
             let page = self.fetch_events_page(req.clone()).await?;
             let new_results = page.asset_events.len();
             if new_results == 0 {
@@ -199,15 +200,28 @@ impl OpenseaAPIClient {
     }
 
     async fn get_events_parallel(&self, req: EventsRequest) -> Result<Vec<Event>> {
-        let mut req = req;
-        let wanted = req.limit.unwrap_or_else(|| req.expected.unwrap_or(1000));
-        req.limit = Some(usize::min(wanted, 50));
+        //first moment from which to fetch
+        let start_date = req.occurred_after.clone().unwrap();
 
-        let mut stream = futures::stream::iter(0..wanted / req.limit.unwrap())
+        // how much time one chunk covers
+        let chunk_size = Duration::days(req.chunk_size.unwrap());
+
+        let mut chunk_starts = vec![start_date];
+        let mut nr_chunks = 0;
+        while chunk_starts.last().unwrap() < &Utc::now().naive_utc() {
+            nr_chunks += 1;
+            chunk_starts.push(start_date + (chunk_size * nr_chunks as i32));
+        }
+
+        let mut stream = futures::stream::iter(0..nr_chunks)
             .map(|i| {
-                self.fetch_events_page(
+                self.get_events_serial(
                     req.clone()
-                        .offset(req.offset.unwrap_or(0) + i * req.limit.unwrap())
+                        .occurred_after(&chunk_starts[i])
+                        .occurred_before(&NaiveDateTime::min(
+                            chunk_starts[i + 1].clone(),
+                            Utc::now().naive_utc().clone(),
+                        ))
                         .build(),
                 )
             })
@@ -218,7 +232,7 @@ impl OpenseaAPIClient {
         while let Some(result) = stream.next().await {
             match result {
                 Ok(mut resp) => {
-                    results.append(&mut resp.asset_events);
+                    results.append(&mut resp);
                 }
                 Err(e) => {
                     println!("Error: {:?}", e);
@@ -241,14 +255,7 @@ impl OpenseaAPIClient {
     }
 
     pub async fn get_events(&self, req: EventsRequest) -> Result<Vec<Event>> {
-        #[allow(unused_variables)]
-        if let Some(expected) = req.expected.as_ref() {
-            log::info!("Have expected, using parallel fetcher");
-            self.get_events_parallel(req).await
-        } else {
-            log::info!("Don't know expected, using serial fetcher");
-            self.get_events_serial(req).await
-        }
+        self.get_events_parallel(req).await
     }
 
     pub async fn get_single_asset(

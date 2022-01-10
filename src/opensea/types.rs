@@ -89,7 +89,7 @@ pub enum SchemaName {
 pub struct AssetContract {
     pub address: String,
     asset_contract_type: AssetContractType,
-    created_date: NaiveDateTime,
+    pub created_date: NaiveDateTime,
     name: Option<String>,
     nft_version: Option<String>,
     opensea_version: Option<String>,
@@ -295,10 +295,10 @@ pub struct EventsRequest {
     pub limit: Option<usize>,
     pub offset: Option<usize>,
 
-    occurred_after: Option<String>,
-    occurred_before: Option<String>,
+    pub occurred_after: Option<NaiveDateTime>,
+    occurred_before: Option<NaiveDateTime>,
     #[serde(skip_serializing)]
-    pub expected: Option<usize>,
+    pub chunk_size: Option<i64>,
 }
 impl Default for EventsRequest {
     fn default() -> Self {
@@ -317,7 +317,7 @@ impl EventsRequest {
             occurred_before: None,
             limit: None,
             offset: None,
-            expected: None,
+            chunk_size: None,
         }
     }
 
@@ -331,18 +331,18 @@ impl EventsRequest {
         self
     }
 
-    pub fn occurred_after(&mut self, arg: &str) -> &mut Self {
-        self.occurred_after = Some(arg.to_string());
+    pub fn occurred_after(&mut self, arg: &NaiveDateTime) -> &mut Self {
+        self.occurred_after = Some(arg.clone());
         self
     }
 
-    pub fn occurred_before(&mut self, arg: &str) -> &mut Self {
-        self.occurred_before = Some(arg.to_string());
+    pub fn occurred_before(&mut self, arg: &NaiveDateTime) -> &mut Self {
+        self.occurred_before = Some(arg.clone());
         self
     }
 
-    pub fn expected(&mut self, arg: usize) -> &mut Self {
-        self.expected = Some(arg);
+    pub fn chunk_size(&mut self, arg: i64) -> &mut Self {
+        self.chunk_size = Some(arg);
         self
     }
 
