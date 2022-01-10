@@ -37,7 +37,7 @@ pub async fn new_collection(
     println!("/new_collection/{}/{}", key, req.collection_slug);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    if key != dotenv::var("ADMIN").unwrap() {
+    if key != dotenv::var("ADMIN_PAI_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
 
@@ -203,7 +203,7 @@ pub async fn update_collection(
     println!("/update_collection/{}/{}", key, req.collection_slug);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    if key != dotenv::var("ADMIN").unwrap() {
+    if key != dotenv::var("ADMIN_PAI_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
 
@@ -305,7 +305,7 @@ pub async fn delete_collection(
     println!("/delete_collection/{}/{}", key, collection_slug);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    if key != dotenv::var("ADMIN").unwrap() {
+    if key != dotenv::var("ADMIN_PAI_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
 
