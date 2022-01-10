@@ -115,9 +115,22 @@ pub async fn main() -> Result<()> {
 
     // println!("nr_listed_now: {:?}", nr_listed_now);
 
-    let highest_sale = read_highest_sale_for_collection(&mut conn, COLLECTION).await?;
+    // let highest_sale = read_highest_sale_for_collection(&mut conn, COLLECTION).await?;
 
-    println!("highest_sale: {:?}", highest_sale);
+    // println!("highest_sale: {:?}", highest_sale);
+
+    let t = read_assets_with_traits(
+        &mut conn,
+        COLLECTION,
+        vec![
+            String::from("background:blue"),
+            String::from("head:illuminatus"),
+        ],
+    )
+    .await
+    .unwrap();
+
+    println!("{:?}", t.len());
 
     Ok(())
 }

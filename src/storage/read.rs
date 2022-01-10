@@ -139,6 +139,27 @@ pub async fn read_assets_with_trait(
     .map_err(|e| e.into())
 }
 
+pub async fn read_assets_with_traits(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    trait_ids: Vec<String>,
+) -> Result<Vec<i32>> {
+    sqlx::query_scalar!(
+        r#"
+        select 
+            token_id 
+        from asset as a 
+            where a.collection_slug = $1 and a.traits @> $2::varchar[]
+            
+        "#,
+        collection_slug,
+        &trait_ids,
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 pub async fn read_assets_for_owner(
     conn: &mut PgConnection,
     collection_slug: &str,

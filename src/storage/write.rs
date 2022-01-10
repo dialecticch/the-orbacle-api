@@ -44,6 +44,37 @@ pub async fn write_asset(conn: &mut PgConnection, asset: &super::Asset) -> Resul
     .map_err(|e| e.into())
 }
 
+pub async fn update_asset_overlap(
+    conn: &mut PgConnection,
+    asset: &super::Asset,
+) -> Result<PgQueryResult> {
+    sqlx::query!(
+        r#"
+       update asset
+       set
+        traits_3_combination_overlap = $3,
+        traits_4_combination_overlap = $4,
+        traits_5_combination_overlap = $5,
+        traits_3_combination_overlap_ids = $6,
+        traits_4_combination_overlap_ids = $7,
+        traits_5_combination_overlap_ids = $8
+    where collection_slug = $1 and token_id = $2
+       
+       "#,
+        asset.collection_slug.to_lowercase(),
+        asset.token_id as i32,
+        asset.traits_3_combination_overlap,
+        asset.traits_4_combination_overlap,
+        asset.traits_5_combination_overlap,
+        &asset.traits_3_combination_overlap_ids,
+        &asset.traits_4_combination_overlap_ids,
+        &asset.traits_5_combination_overlap_ids,
+    )
+    .execute(conn)
+    .await
+    .map_err(|e| e.into())
+}
+
 // ============ COLLECTION ============
 pub async fn write_collection(
     conn: &mut PgConnection,

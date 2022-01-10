@@ -126,16 +126,18 @@ async fn _store_collection(
 
     println!("  Storing {} assets...", all_assets.len());
 
-    let processed = preprocess::process_assets(
-        conn,
-        all_assets.clone(),
-        collection_slug,
-        ignored_trait_types_overlap,
-    )
-    .await?;
+    let processed = preprocess::process_assets(conn, all_assets.clone(), collection_slug).await?;
 
     for a in &processed {
         write_asset(conn, a).await.unwrap();
+    }
+
+    let updated =
+        preprocess::generate_overlaps(processed, collection_slug, &ignored_trait_types_overlap)
+            .await?;
+
+    for a in &updated {
+        update_asset_overlap(conn, a).await.unwrap();
     }
 
     println!("  Stored {} assets!", all_assets.len());
