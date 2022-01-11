@@ -9,10 +9,15 @@ async fn main() {
     let pool = establish_connection().await;
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
-    // run the updater in the background
-    let lim =
-        RateLimiter::direct(Quota::with_period(std::time::Duration::from_secs(3600u64)).unwrap());
-    tokio::task::spawn(update_db(lim));
+    // // run the updater in the background
+    // let lim =
+    //     RateLimiter::direct(Quota::with_period(std::time::Duration::from_secs(3600u64)).unwrap());
+    // tokio::task::spawn({
+    //     lim.until_ready().await;
+    //     update_db(lim)
+    // });
+
+    println!("Starting server...");
 
     //start the server
     server::start().await
