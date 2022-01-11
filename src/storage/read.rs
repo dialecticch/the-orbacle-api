@@ -24,11 +24,12 @@ pub async fn read_collection(conn: &mut PgConnection, slug: &str) -> Result<Coll
     .map_err(|e| e.into())
 }
 
-pub async fn read_all_collections(conn: &mut PgConnection) -> Result<Vec<String>> {
-    sqlx::query_scalar!(
+pub async fn read_all_collections(conn: &mut PgConnection) -> Result<Vec<CollectionSmall>> {
+    sqlx::query_as!(
+        CollectionSmall,
         r#"
             select
-                slug 
+                slug, name 
             from
                 collection
         "#,

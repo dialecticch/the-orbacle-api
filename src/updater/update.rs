@@ -18,34 +18,34 @@ pub async fn update_db(
 
         let collections = read_all_collections(&mut conn).await?;
 
-        for collection_slug in collections {
-            fetch_collection_floor(&mut conn, &collection_slug)
+        for collection in collections {
+            fetch_collection_floor(&mut conn, &collection.slug)
                 .await
                 .unwrap_or_default();
 
             let latest_listing =
-                match read_latests_listing_for_collection(&mut conn, &collection_slug).await {
+                match read_latests_listing_for_collection(&mut conn, &collection.slug).await {
                     Ok(l) => l,
                     Err(_) => continue,
                 };
 
             fetch_collection_listings(
                 &mut conn,
-                &collection_slug,
+                &collection.slug,
                 &NaiveDateTime::from_timestamp(latest_listing as i64, 0),
             )
             .await
             .unwrap_or_default();
 
             let latest_sale =
-                match read_latest_sale_for_collection(&mut conn, &collection_slug).await {
+                match read_latest_sale_for_collection(&mut conn, &collection.slug).await {
                     Ok(l) => l,
                     Err(_) => continue,
                 };
 
             fetch_collection_sales(
                 &mut conn,
-                &collection_slug,
+                &collection.slug,
                 Some(NaiveDateTime::from_timestamp(latest_sale as i64, 0)),
             )
             .await

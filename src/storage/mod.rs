@@ -48,6 +48,12 @@ pub struct Collection {
     pub avg_trait_rarity: f64,
 }
 
+#[derive(serde::Serialize, Debug, rweb::Schema)]
+pub struct CollectionSmall {
+    pub slug: String,
+    pub name: String,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct SaleEvent {
     pub collection_slug: String,
