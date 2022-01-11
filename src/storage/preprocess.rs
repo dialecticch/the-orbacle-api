@@ -69,7 +69,7 @@ pub async fn generate_overlaps(
     collection_slug: &str,
     ignored_trait_types_overlap: &[String],
 ) -> Result<Vec<Asset>> {
-    let chunks: Vec<_> = assets.chunks(100).collect();
+    let chunks: Vec<_> = assets.chunks(5).collect();
 
     let mut stream = futures::stream::iter(0..chunks.len())
         .map(|i| {
@@ -77,7 +77,7 @@ pub async fn generate_overlaps(
             println!("chunk {} processed", i);
             _generate_overlaps(list, &collection_slug, ignored_trait_types_overlap.to_vec())
         })
-        .buffer_unordered(4);
+        .buffer_unordered(5);
 
     let mut results = vec![];
 
