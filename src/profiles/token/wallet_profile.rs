@@ -31,7 +31,7 @@ impl WalletProfile {
         let mut tokens = HashMap::<String, TokensInner>::new();
 
         for (t, p) in profiles {
-            let asset = read_asset(conn, &collection_slug, t.parse::<i32>().unwrap()).await?;
+            let asset = read_asset(conn, collection_slug, t.parse::<i32>().unwrap()).await?;
             tokens.insert(
                 t.clone(),
                 TokensInner {

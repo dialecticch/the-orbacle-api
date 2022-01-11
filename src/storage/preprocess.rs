@@ -1,16 +1,21 @@
-use super::read::read_assets_with_traits;
+use super::read::read_collection;
 use super::Asset;
 use crate::opensea::types::Asset as OpenseaAsset;
-use crate::storage::establish_connection;
 use anyhow::Result;
-use futures::StreamExt;
 use itertools::Itertools;
+use sqlx::PgConnection;
 use std::collections::HashSet;
 
 pub async fn process_assets(
+    conn: &mut PgConnection,
     os_assets: Vec<OpenseaAsset>,
     collection_slug: &str,
+    ignored_trait_types_overlap: Vec<String>,
 ) -> Result<Vec<Asset>> {
+    let collection = read_collection(conn, collection_slug).await?;
+
+    println!("{:?}", collection.total_supply);
+
     let mut assets: Vec<Asset> = vec![];
     for asset in os_assets {
         let trait_list = asset
@@ -60,50 +65,51 @@ pub async fn process_assets(
             traits_5_combination_overlap_ids: vec![],
         });
     }
+    println!("base processing done");
 
-    Ok(assets)
-}
-
-pub async fn generate_overlaps(
-    assets: Vec<Asset>,
-    collection_slug: &str,
-    ignored_trait_types_overlap: &[String],
-) -> Result<Vec<Asset>> {
-    let chunks: Vec<_> = assets.chunks(5).collect();
-
-    let mut stream = futures::stream::iter(0..chunks.len())
-        .map(|i| {
-            let list = chunks[i].clone().to_vec();
-            _generate_overlaps(list, &collection_slug, ignored_trait_types_overlap.to_vec())
-        })
-        .buffer_unordered(5);
-
-    let mut results = vec![];
-
-    while let Some(result) = stream.next().await {
-        match result {
-            Ok(mut resp) => {
-                results.append(&mut resp);
-            }
-            Err(e) => {
-                println!("Error: {:?}", e);
-            }
-        }
+    let mut res = vec![];
+    let cpus = num_cpus::get();
+    println!("cpus: {:?}", cpus);
+    let chunks: Vec<_> = assets.chunks(cpus).collect();
+    let mut handlers = vec![];
+    for c in chunks {
+        let collection = assets.clone();
+        let ignored = ignored_trait_types_overlap.clone();
+        let list = c.to_vec();
+        handlers.push(std::thread::spawn(move || {
+            compute_combinations(list.clone(), collection, &ignored).unwrap()
+        }))
     }
 
-    Ok(results)
+    for h in handlers {
+        res.extend(h.join().unwrap())
+    }
+
+    Ok(res)
 }
 
-pub async fn _generate_overlaps(
+fn compute_combinations(
     assets: Vec<Asset>,
-    collection_slug: &str,
-    ignored_trait_types_overlap: Vec<String>,
+    collection: Vec<Asset>,
+    ignored_trait_types_overlap: &[String],
 ) -> Result<Vec<Asset>> {
     let mut res = vec![];
-    let pool = establish_connection().await;
-    let mut conn = pool.acquire().await.unwrap();
+
+    let collection_filtered = collection
+        .into_iter()
+        .map(|a| {
+            (
+                a.token_id,
+                a.traits
+                    .iter()
+                    .filter(|a| !ignored_trait_types_overlap.contains(a))
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect::<Vec<_>>();
+
     for mut asset in assets {
-        println!("{:?}", asset.token_id);
         let mut unique_3 = HashSet::<i32>::new();
         let mut unique_4 = HashSet::<i32>::new();
         let mut unique_5 = HashSet::<i32>::new();
@@ -118,43 +124,47 @@ pub async fn _generate_overlaps(
 
         for vpair in asset_traits.iter().combinations(3) {
             unique_3.extend(
-                read_assets_with_traits(
-                    &mut conn,
-                    collection_slug,
-                    vpair.into_iter().cloned().collect(),
-                )
-                .await?
-                .into_iter()
-                .filter(|id| id != &asset.token_id)
-                .collect::<Vec<_>>(),
+                collection_filtered
+                    .iter()
+                    .filter(|a| a.0 != asset.token_id)
+                    .filter(|a| {
+                        a.1.contains(vpair[0]) && a.1.contains(vpair[1]) && a.1.contains(vpair[2])
+                    })
+                    .map(|a| a.0)
+                    .collect::<Vec<_>>(),
             );
         }
 
         for vpair in asset_traits.iter().combinations(4) {
             unique_4.extend(
-                read_assets_with_traits(
-                    &mut conn,
-                    collection_slug,
-                    vpair.into_iter().cloned().collect(),
-                )
-                .await?
-                .into_iter()
-                .filter(|id| id != &asset.token_id)
-                .collect::<Vec<_>>(),
+                collection_filtered
+                    .iter()
+                    .filter(|a| a.0 != asset.token_id)
+                    .filter(|a| {
+                        a.1.contains(vpair[0])
+                            && a.1.contains(vpair[1])
+                            && a.1.contains(vpair[2])
+                            && a.1.contains(vpair[3])
+                    })
+                    .map(|a| a.0)
+                    .collect::<Vec<_>>(),
             );
         }
 
         for vpair in asset_traits.iter().combinations(5) {
             unique_5.extend(
-                read_assets_with_traits(
-                    &mut conn,
-                    collection_slug,
-                    vpair.into_iter().cloned().collect(),
-                )
-                .await?
-                .into_iter()
-                .filter(|id| id != &asset.token_id)
-                .collect::<Vec<_>>(),
+                collection_filtered
+                    .iter()
+                    .filter(|a| a.0 != asset.token_id)
+                    .filter(|a| {
+                        a.1.contains(vpair[0])
+                            && a.1.contains(vpair[1])
+                            && a.1.contains(vpair[2])
+                            && a.1.contains(vpair[3])
+                            && a.1.contains(vpair[4])
+                    })
+                    .map(|a| a.0)
+                    .collect::<Vec<_>>(),
             );
         }
 
@@ -168,8 +178,6 @@ pub async fn _generate_overlaps(
         res.push(asset.clone());
     }
 
-    pool.close().await;
-
     Ok(res)
 }
 
@@ -178,6 +186,7 @@ mod tests {
     use super::*;
 
     use crate::opensea::types::*;
+    use crate::storage::establish_connection;
     #[tokio::test]
     async fn test_asset_process() {
         let asset1 = OpenseaAsset {
@@ -293,9 +302,16 @@ mod tests {
                 address: String::from("addr"),
             },
         };
-        let a = process_assets(vec![asset1, asset2, asset3], "forgottenruneswizardscult")
-            .await
-            .unwrap();
+        let pool = establish_connection().await;
+        let mut conn = pool.acquire().await.unwrap();
+        let a = process_assets(
+            &mut conn,
+            vec![asset1, asset2, asset3],
+            "forgottenruneswizardscult",
+            vec!["background".to_string()],
+        )
+        .await
+        .unwrap();
         println!("{}", serde_json::to_string_pretty(&a).unwrap());
         assert!(!a.is_empty());
     }

@@ -1,7 +1,7 @@
 use super::super::errors::{internal_error, ServiceError};
 use crate::analyzers::rarities::get_collection_avg_trait_rarity;
 use crate::opensea::types::AssetsRequest;
-use crate::opensea::OpenseaAPIClient;
+use crate::opensea::{types::Trait, OpenseaAPIClient};
 use crate::storage::delete::*;
 use crate::storage::preprocess;
 use crate::storage::write::*;
@@ -11,6 +11,7 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use rweb::*;
 use sqlx::{PgConnection, PgPool};
+use std::collections::HashSet;
 
 #[derive(serde::Deserialize, rweb::Schema)]
 pub struct NewCollectionBody {
@@ -34,7 +35,6 @@ pub async fn new_collection(
 ) -> Result<Json<()>, Rejection> {
     let req: NewCollectionBody = body.into_inner();
     println!("/new_collection/{}", req.collection_slug);
-
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
@@ -60,9 +60,11 @@ async fn _store_collection(
     ignored_trait_types_rarity: Vec<String>,
     ignored_trait_types_overlap: Vec<String>,
 ) -> Result<()> {
-    let mut conn = pool.acquire().await?;
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(&collection_slug).await?;
+    let mut conn = pool.acquire().await?;
+
+    // println!("  Fetching assets...");
 
     let req = AssetsRequest::new()
         .collection(&collection_slug)
@@ -71,14 +73,23 @@ async fn _store_collection(
 
     let all_assets = client.get_assets(req).await?;
 
-    let traits = all_assets
+    let traits_all = all_assets
         .clone()
         .iter()
         .map(|a| a.traits.clone())
         .flatten()
         .flatten()
+        .collect::<Vec<_>>();
+    println!("{:?}", traits_all.len());
+
+    let traits_filtered: HashSet<Trait> = traits_all
+        .into_iter()
         .filter(|t| t.trait_count.is_some())
         .filter(|t| !ignored_trait_types_rarity.contains(&t.trait_type.to_lowercase()))
+        .collect();
+
+    let traits: Vec<StorageTrait> = traits_filtered
+        .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
             trait_id: format!(
@@ -107,19 +118,25 @@ async fn _store_collection(
     .await
     .unwrap_or_default();
 
-    let processed = preprocess::process_assets(all_assets.clone(), &collection_slug).await?;
+    println!("  Stored traits stats!");
+
+    println!("  Storing {} assets...", all_assets.len());
+
+    let processed = preprocess::process_assets(
+        &mut conn,
+        all_assets.clone(),
+        &collection_slug,
+        ignored_trait_types_overlap,
+    )
+    .await?;
 
     for a in &processed {
         write_asset(&mut conn, a).await.unwrap();
     }
 
-    let updated =
-        preprocess::generate_overlaps(processed, &collection_slug, &ignored_trait_types_overlap)
-            .await?;
+    println!("  Stored {} assets!", all_assets.len());
 
-    for a in &updated {
-        update_asset_overlap(&mut conn, a).await.unwrap();
-    }
+    println!("  Storing listings...");
 
     for a in &all_assets {
         if a.sell_orders.is_some() {
@@ -146,26 +163,23 @@ async fn _store_collection(
             .unwrap();
         }
     }
+    println!("  Stored {} Listings!", all_assets.len());
+
+    println!("  Fetching events...");
 
     let now = Utc::now();
 
     fetch_collection_listings(
         &mut conn,
         &collection_slug,
-        &(now - Duration::days(30)).naive_utc(),
+        &(now - Duration::days(14)).naive_utc(),
     )
     .await
     .unwrap();
 
-    fetch_collection_sales(
-        &mut conn,
-        &collection_slug,
-        Some(collection.collection.primary_asset_contracts[0].created_date),
-    )
-    .await
-    .unwrap();
-
-    println!("Done storing!");
+    fetch_collection_sales(&mut conn, &collection_slug, None)
+        .await
+        .unwrap();
 
     Ok(())
 }
