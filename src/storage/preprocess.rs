@@ -108,6 +108,7 @@ pub async fn _generate_overlaps(
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await.unwrap();
     for mut asset in assets {
+        println!("{:?}", asset.token_id);
         let mut unique_3 = HashSet::<i32>::new();
         let mut unique_4 = HashSet::<i32>::new();
         let mut unique_5 = HashSet::<i32>::new();
