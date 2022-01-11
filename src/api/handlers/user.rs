@@ -170,6 +170,5 @@ pub async fn _get_wallet_profile(
     collection_slug: String,
     wallet: String,
 ) -> Result<WalletProfile> {
-    println!("{:?}", format!("{}{}", collection_slug, wallet));
     WalletProfile::make(conn, &collection_slug, &wallet).await
 }

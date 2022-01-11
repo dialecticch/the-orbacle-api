@@ -19,8 +19,6 @@ pub async fn update_db(
         let collections = read_all_collections(&mut conn).await.unwrap();
 
         for collection_slug in collections {
-            println!("Updating: {:?}", collection_slug);
-
             fetch_collection_floor(&mut conn, &collection_slug)
                 .await
                 .unwrap();

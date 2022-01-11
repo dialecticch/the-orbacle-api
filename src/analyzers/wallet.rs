@@ -57,9 +57,9 @@ pub async fn get_value_for_wallet(
         .await
         .unwrap();
 
-        value_max += profile.max_price;
-        value_min += profile.min_price;
-        value_avg += profile.avg_price;
+        value_max += profile.custom_price.unwrap_or(profile.max_price);
+        value_min += profile.custom_price.unwrap_or(profile.min_price);
+        value_avg += profile.custom_price.unwrap_or(profile.avg_price);
 
         map.insert(token_id.to_string(), profile);
     }
