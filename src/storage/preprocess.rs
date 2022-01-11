@@ -131,7 +131,10 @@ pub async fn _generate_overlaps(
                     collection_slug,
                     vpair.into_iter().cloned().collect(),
                 )
-                .await?,
+                .await?
+                .into_iter()
+                .filter(|id| id != &asset.token_id)
+                .collect::<Vec<_>>(),
             );
         }
 
@@ -142,7 +145,10 @@ pub async fn _generate_overlaps(
                     collection_slug,
                     vpair.into_iter().cloned().collect(),
                 )
-                .await?,
+                .await?
+                .into_iter()
+                .filter(|id| id != &asset.token_id)
+                .collect::<Vec<_>>(),
             );
         }
 
@@ -153,7 +159,10 @@ pub async fn _generate_overlaps(
                     collection_slug,
                     vpair.into_iter().cloned().collect(),
                 )
-                .await?,
+                .await?
+                .into_iter()
+                .filter(|id| id != &asset.token_id)
+                .collect::<Vec<_>>(),
             );
         }
 
