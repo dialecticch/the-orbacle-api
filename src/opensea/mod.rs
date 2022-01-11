@@ -72,7 +72,6 @@ impl OpenseaAPIClient {
                 .header("Accept-Encoding", "application/json")
                 .header("x-api-key", dotenv::var("OPENSEA_API_KEY").unwrap())
                 .build()?;
-            println!("{}", reqw.url());
             let response = self.client.execute(reqw).await?;
             Ok(response)
         })
@@ -201,7 +200,7 @@ impl OpenseaAPIClient {
 
     async fn get_events_parallel(&self, req: EventsRequest) -> Result<Vec<Event>> {
         //first moment from which to fetch
-        let start_date = req.occurred_after.clone().unwrap();
+        let start_date = req.occurred_after.unwrap();
 
         // how much time one chunk covers
         let chunk_size = Duration::days(req.chunk_size.unwrap());
@@ -219,8 +218,8 @@ impl OpenseaAPIClient {
                     req.clone()
                         .occurred_after(&chunk_starts[i])
                         .occurred_before(&NaiveDateTime::min(
-                            chunk_starts[i + 1].clone(),
-                            Utc::now().naive_utc().clone(),
+                            chunk_starts[i + 1],
+                            Utc::now().naive_utc(),
                         ))
                         .build(),
                 )

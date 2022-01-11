@@ -123,8 +123,7 @@ async fn _store_collection(
 
     println!("  Storing {} assets...", all_assets.len());
 
-    let processed =
-        preprocess::process_assets(&mut conn, all_assets.clone(), &collection_slug).await?;
+    let processed = preprocess::process_assets(all_assets.clone(), &collection_slug).await?;
 
     for a in &processed {
         write_asset(&mut conn, a).await.unwrap();
@@ -241,24 +240,14 @@ async fn _update_collection(
 
     let all_assets = client.get_assets(req).await?;
 
-    let traits_all = all_assets
+    let traits = all_assets
         .clone()
         .iter()
         .map(|a| a.traits.clone())
         .flatten()
         .flatten()
-        .collect::<Vec<_>>();
-    println!("{:?}", traits_all.len());
-
-    let traits_filtered: HashSet<Trait> = traits_all
-        .into_iter()
         .filter(|t| t.trait_count.is_some())
         .filter(|t| !ignored_trait_types_rarity.contains(&t.trait_type.to_lowercase()))
-        .collect();
-    println!("{:?}", traits_filtered.len());
-
-    let traits: Vec<StorageTrait> = traits_filtered
-        .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
             trait_id: format!(

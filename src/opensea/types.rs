@@ -332,12 +332,12 @@ impl EventsRequest {
     }
 
     pub fn occurred_after(&mut self, arg: &NaiveDateTime) -> &mut Self {
-        self.occurred_after = Some(arg.clone());
+        self.occurred_after = Some(*arg);
         self
     }
 
     pub fn occurred_before(&mut self, arg: &NaiveDateTime) -> &mut Self {
-        self.occurred_before = Some(arg.clone());
+        self.occurred_before = Some(*arg);
         self
     }
 

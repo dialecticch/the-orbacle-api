@@ -25,13 +25,13 @@ impl LiquidityProfile {
         max_price: f64,
         most_valuable_trait: &Option<String>,
     ) -> Result<Self> {
-        let rarest_trait_count = read_trait(conn, collection_slug, &rarest_trait)
+        let rarest_trait_count = read_trait(conn, collection_slug, rarest_trait)
             .await?
             .trait_count;
 
         log::info!("Getting rarest_trait_nr_listed");
         let rarest_trait_nr_listed =
-            get_trait_nr_listed(conn, collection_slug, &rarest_trait.clone()).await?;
+            get_trait_nr_listed(conn, collection_slug, rarest_trait).await?;
 
         let (mvt_trait_count, mvt_nr_listed, mvt_sale_count_60d) = match most_valuable_trait.clone()
         {
@@ -52,7 +52,7 @@ impl LiquidityProfile {
 
         log::info!("Getting rarest_trait_sale_count");
         let rarest_trait_sale_count_60d =
-            get_sale_count_trait(conn, collection_slug, &rarest_trait.clone(), 60).await?;
+            get_sale_count_trait(conn, collection_slug, rarest_trait, 60).await?;
 
         log::info!("Getting nr_sales_above_max_price_60d");
         let nr_sales_above_max_price_60d = read_sales_for_collection_above_price_after_ts(

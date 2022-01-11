@@ -14,13 +14,18 @@
     "ignored_trait_types_overlap" : []
 
 }
-
-
+{
+    "collection_slug":"forgottenrunesponies",
+    "total_supply_expected" : 700,
+    "rarity_cutoff_multiplier" : 1.5,
+    "ignored_trait_types_rarity" : [],
+    "ignored_trait_types_overlap" : []
+}
 {
     "collection_slug":"forgottenruneswizardscult",
-    "total_supply_expected" : 9419,
+    "total_supply_expected" : 10000,
     "rarity_cutoff_multiplier" : 2,
     "ignored_trait_types_rarity" : [],
-    "ignored_trait_types_overlap" : ["background"]
+    "ignored_trait_types_overlap" : []
 
 }

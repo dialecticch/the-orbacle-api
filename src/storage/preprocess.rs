@@ -1,22 +1,16 @@
-use super::read::{read_assets_with_traits, read_collection};
+use super::read::read_assets_with_traits;
 use super::Asset;
 use crate::opensea::types::Asset as OpenseaAsset;
 use crate::storage::establish_connection;
 use anyhow::Result;
 use futures::StreamExt;
 use itertools::Itertools;
-use sqlx::PgConnection;
 use std::collections::HashSet;
 
 pub async fn process_assets(
-    conn: &mut PgConnection,
     os_assets: Vec<OpenseaAsset>,
     collection_slug: &str,
 ) -> Result<Vec<Asset>> {
-    let collection = read_collection(conn, collection_slug).await?;
-
-    println!("{:?}", collection.total_supply);
-
     let mut assets: Vec<Asset> = vec![];
     for asset in os_assets {
         let trait_list = asset
@@ -66,7 +60,6 @@ pub async fn process_assets(
             traits_5_combination_overlap_ids: vec![],
         });
     }
-    println!("base processing done");
 
     Ok(assets)
 }
@@ -74,15 +67,18 @@ pub async fn process_assets(
 pub async fn generate_overlaps(
     assets: Vec<Asset>,
     collection_slug: &str,
-    ignored_trait_types_overlap: &Vec<String>,
+    ignored_trait_types_overlap: &[String],
 ) -> Result<Vec<Asset>> {
     let chunks: Vec<_> = assets.chunks(100).collect();
 
     let mut stream = futures::stream::iter(0..chunks.len())
         .map(|i| {
-            let ignored = ignored_trait_types_overlap.clone();
-            let list = chunks[i].clone().to_vec();
-            _generate_overlaps(list.clone(), collection_slug.clone(), ignored.clone())
+            let list = <&[Asset]>::clone(&chunks[i]).to_vec();
+            _generate_overlaps(
+                list,
+                <&str>::clone(&collection_slug),
+                ignored_trait_types_overlap.to_vec(),
+            )
         })
         .buffer_unordered(5);
 
@@ -111,7 +107,6 @@ pub async fn _generate_overlaps(
     let pool = establish_connection().await;
     let mut conn = pool.acquire().await.unwrap();
     for mut asset in assets {
-        println!("{:?}", asset.token_id);
         let mut unique_3 = HashSet::<i32>::new();
         let mut unique_4 = HashSet::<i32>::new();
         let mut unique_5 = HashSet::<i32>::new();
@@ -120,7 +115,7 @@ pub async fn _generate_overlaps(
             .traits
             .clone()
             .iter()
-            .filter(|a| !ignored_trait_types_overlap.contains(&a))
+            .filter(|a| !ignored_trait_types_overlap.contains(a))
             .cloned()
             .collect();
 
@@ -184,7 +179,6 @@ mod tests {
     use super::*;
 
     use crate::opensea::types::*;
-    use crate::storage::establish_connection;
     #[tokio::test]
     async fn test_asset_process() {
         let asset1 = OpenseaAsset {
@@ -300,15 +294,9 @@ mod tests {
                 address: String::from("addr"),
             },
         };
-        let pool = establish_connection().await;
-        let mut conn = pool.acquire().await.unwrap();
-        let a = process_assets(
-            &mut conn,
-            vec![asset1, asset2, asset3],
-            "forgottenruneswizardscult",
-        )
-        .await
-        .unwrap();
+        let a = process_assets(vec![asset1, asset2, asset3], "forgottenruneswizardscult")
+            .await
+            .unwrap();
         println!("{}", serde_json::to_string_pretty(&a).unwrap());
         assert!(!a.is_empty());
     }

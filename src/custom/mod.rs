@@ -3,15 +3,20 @@ use std::collections::HashMap;
 use std::fs::File;
 
 pub fn read_custom_price(collection_slug: &str, token_id: i32) -> Result<Option<f64>> {
-    let map: HashMap<String, HashMap<String, f64>> =
-        serde_json::from_reader(File::open("./src/custom/custom_prices.json")?)?;
+    match dotenv::var("CUSTOM_PRICES_JSON_PATH") {
+        Ok(path) => {
+            let map: HashMap<String, HashMap<String, f64>> =
+                serde_json::from_reader(File::open(path)?)?;
 
-    match map.get(collection_slug) {
-        Some(c) => match c.get(&token_id.to_string()) {
-            Some(p) => Ok(Some(*p)),
-            None => Ok(None),
-        },
-        None => Ok(None),
+            match map.get(collection_slug) {
+                Some(c) => match c.get(&token_id.to_string()) {
+                    Some(p) => Ok(Some(*p)),
+                    None => Ok(None),
+                },
+                None => Ok(None),
+            }
+        }
+        Err(_) => Ok(None),
     }
 }
 

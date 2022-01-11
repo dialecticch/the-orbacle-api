@@ -35,15 +35,16 @@ impl PriceProfile {
         let collection_floor = get_collection_floor(conn, collection_slug).await?;
 
         log::info!("Getting most_rare_trait_floor");
-        let most_rare_trait_floor = get_trait_floor(conn, collection_slug, rarest_trait.clone())
-            .await?
-            .map(|t| t.floor_price);
+        let most_rare_trait_floor =
+            get_trait_floor(conn, collection_slug, <&str>::clone(&rarest_trait))
+                .await?
+                .map(|t| t.floor_price);
 
         log::info!("Getting last_sale");
         let last_sale = get_asset_sales(conn, collection_slug, token_id)
             .await?
             .last()
-            .map(|s| s.clone());
+            .cloned();
 
         log::info!("Getting mvt data");
         let (most_valued_trait_floor, avg_last_three_mvt_sales, last_sale_relative_mvt_avg) =

@@ -29,7 +29,7 @@ pub async fn get_value_for_wallet(
     let mut value_avg = 0f64;
     let mut map = HashMap::<String, PriceProfile>::new();
     for token_id in ids {
-        let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
+        let token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
 
         if token_traits.is_empty() {
             continue;
@@ -39,7 +39,7 @@ pub async fn get_value_for_wallet(
 
         let most_valuable_trait = get_most_valued_trait_floor(
             conn,
-            &collection_slug,
+            collection_slug,
             token_traits.clone(),
             collection.rarity_cutoff,
         )
@@ -57,9 +57,9 @@ pub async fn get_value_for_wallet(
         .await
         .unwrap();
 
-        value_max += profile.custom_price.unwrap_or(profile.max_price);
-        value_min += profile.custom_price.unwrap_or(profile.min_price);
-        value_avg += profile.custom_price.unwrap_or(profile.avg_price);
+        value_max += profile.max_price;
+        value_min += profile.min_price;
+        value_avg += profile.avg_price;
 
         map.insert(token_id.to_string(), profile);
     }

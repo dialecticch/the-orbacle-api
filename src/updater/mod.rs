@@ -22,12 +22,11 @@ pub async fn fetch_collection_listings(
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
         .event_type("cancelled")
-        .occurred_after(&occurred_after)
+        .occurred_after(occurred_after)
         .chunk_size(7)
         .build();
 
     let cancelled = client.get_events(req).await.unwrap();
-    println!("{} Cancelled Listings", cancelled.len());
 
     for event in cancelled {
         if event.asset.is_none() {
@@ -50,7 +49,7 @@ pub async fn fetch_collection_listings(
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
         .event_type("successful")
-        .occurred_after(&occurred_after)
+        .occurred_after(occurred_after)
         .chunk_size(7)
         .build();
 
@@ -78,12 +77,11 @@ pub async fn fetch_collection_listings(
     let req = EventsRequest::new()
         .asset_contract_address(&collection.address)
         .event_type("created")
-        .occurred_after(&occurred_after)
+        .occurred_after(occurred_after)
         .chunk_size(7)
         .build();
 
     let created = client.get_events(req).await.unwrap();
-    println!("{} Created Listings", created.len());
 
     for event in created {
         if event.asset.is_none() {
@@ -113,8 +111,6 @@ pub async fn fetch_collection_sales(
 ) -> Result<()> {
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
-    println!("{:?}", occurred_after);
-
     let client = OpenseaAPIClient::new(1);
 
     let req = match occurred_after {
@@ -132,7 +128,6 @@ pub async fn fetch_collection_sales(
     };
 
     let sales = client.get_events(req).await.unwrap();
-    println!("{} New Sales", sales.len());
     for e in &sales {
         if e.payment_token.symbol == "ETH" {
             write_sale(conn, e, collection_slug)
