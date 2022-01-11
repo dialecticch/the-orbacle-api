@@ -12,11 +12,12 @@ pub async fn get_token_listings(
     let mut map: Vec<TokenListing> = Vec::new();
     for id in token_ids {
         let listing = read_latests_listing_for_asset(conn, collection_slug, id).await?;
-
-        map.push(TokenListing {
-            token_id: id,
-            price: listing[0].price,
-        });
+        if !listing.is_empty() {
+            map.push(TokenListing {
+                token_id: id,
+                price: listing[0].price,
+            });
+        }
     }
 
     Ok(map)

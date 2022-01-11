@@ -46,8 +46,15 @@ impl TokenProfile {
         let collection_address = collection.address;
 
         log::info!("Getting listing_price");
-        let listing_price =
-            get_token_listings(conn, &collection_slug, vec![token_id]).await?[0].price;
+        let listing_price = if let Some(t) =
+            get_token_listings(conn, &collection_slug, vec![token_id])
+                .await?
+                .first()
+        {
+            t.price
+        } else {
+            None
+        };
 
         let nr_listings_30d = read_listings_token_after_ts(
             conn,
@@ -60,7 +67,11 @@ impl TokenProfile {
 
         let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
 
-        let rarest_trait = token_traits[0].trait_id.clone();
+        let rarest_trait = if let Some(t) = token_traits.first() {
+            t.trait_id.clone()
+        } else {
+            String::default()
+        };
 
         let most_valuable_trait = get_most_valued_trait_floor(
             conn,
