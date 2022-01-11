@@ -74,7 +74,6 @@ pub async fn generate_overlaps(
     let mut stream = futures::stream::iter(0..chunks.len())
         .map(|i| {
             let list = chunks[i].clone().to_vec();
-            println!("chunk {} processed", i);
             _generate_overlaps(list, &collection_slug, ignored_trait_types_overlap.to_vec())
         })
         .buffer_unordered(5);
@@ -84,7 +83,6 @@ pub async fn generate_overlaps(
     while let Some(result) = stream.next().await {
         match result {
             Ok(mut resp) => {
-                println!("chunk stored...",);
                 results.append(&mut resp);
             }
             Err(e) => {
