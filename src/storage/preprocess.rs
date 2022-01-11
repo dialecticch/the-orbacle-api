@@ -171,6 +171,8 @@ pub async fn _generate_overlaps(
         res.push(asset.clone());
     }
 
+    pool.close().await;
+
     Ok(res)
 }
 
