@@ -80,13 +80,14 @@ pub async fn generate_overlaps(
                 ignored_trait_types_overlap.to_vec(),
             )
         })
-        .buffer_unordered(5);
+        .buffer_unordered(4);
 
     let mut results = vec![];
 
     while let Some(result) = stream.next().await {
         match result {
             Ok(mut resp) => {
+                println!("chunk stored...",);
                 results.append(&mut resp);
             }
             Err(e) => {

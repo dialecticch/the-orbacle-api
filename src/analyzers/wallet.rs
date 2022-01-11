@@ -10,7 +10,7 @@ pub async fn get_value_for_wallet(
     conn: &mut PgConnection,
     collection_slug: &str,
     wallet: &str,
-) -> Result<(f64, f64, f64, HashMap<String, PriceProfile>)> {
+) -> Result<(f64, f64, f64, String, HashMap<String, PriceProfile>)> {
     let client = OpenseaAPIClient::new(2);
 
     let collection = read_collection(conn, collection_slug).await?;
@@ -64,5 +64,11 @@ pub async fn get_value_for_wallet(
         map.insert(token_id.to_string(), profile);
     }
 
-    Ok((value_max, value_min, value_avg, map))
+    Ok((
+        value_max,
+        value_min,
+        value_avg,
+        collection.address.clone(),
+        map,
+    ))
 }
