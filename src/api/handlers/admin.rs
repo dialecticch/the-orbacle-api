@@ -183,7 +183,7 @@ async fn _store_collection(
 #[openapi(tags("Admin"))]
 #[openapi(summary = "Update values in a new collection")]
 #[openapi(description = r#"
-Fetches and stores collection data
+    Update ignored trait types and cutoff multiplier
 "#)]
 pub async fn update_collection(
     #[data] pool: PgPool,
@@ -271,9 +271,9 @@ async fn _update_collection(
 
 #[delete("/admin/collection/{collection_slug}")]
 #[openapi(tags("Admin"))]
-#[openapi(summary = "Update values in a new collection")]
+#[openapi(summary = "Delete all collection data")]
 #[openapi(description = r#"
-Fetches and stores collection data
+Deletes all data for this collection from system, including Assets and Traits
 "#)]
 pub async fn delete_collection(
     #[data] pool: PgPool,

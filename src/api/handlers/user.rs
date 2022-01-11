@@ -12,10 +12,10 @@ use rweb::*;
 use sqlx::{PgConnection, PgPool};
 
 #[get("/profile/{collection_slug}/{token_id}")]
-#[openapi(tags("system"))]
-#[openapi(summary = "Get Token Profile")]
+#[openapi(tags("Token"))]
+#[openapi(summary = "Get a profile for token")]
 #[openapi(description = r#"
-Fetches token data and returns a token profile
+    Gets token data and returns the full profile for token and collection
 "#)]
 pub async fn get_profile(
     #[data] pool: PgPool,
@@ -48,10 +48,10 @@ async fn _get_profile(
 }
 
 #[get("/price/{collection_slug}/{token_id}")]
-#[openapi(tags("system"))]
-#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(tags("Token"))]
+#[openapi(summary = "Get pricing for token")]
 #[openapi(description = r#"
-Fetches token pricing data and returns a token profile
+    Gets token data and returns only the pricing for the token
 "#)]
 pub async fn get_price_profile(
     #[data] pool: PgPool,
@@ -105,10 +105,10 @@ async fn _get_price_profile(
 }
 
 #[get("/collection/{collection_slug}")]
-#[openapi(tags("system"))]
-#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(tags("Collection"))]
+#[openapi(summary = "Get Profile for collection")]
 #[openapi(description = r#"
-Fetches collection stats
+Gets the collection profile for given collection_slug
 "#)]
 pub async fn get_collection_profile(
     #[data] pool: PgPool,
@@ -124,10 +124,10 @@ pub async fn get_collection_profile(
 }
 
 #[get("/collection/")]
-#[openapi(tags("system"))]
-#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(tags("Collection"))]
+#[openapi(summary = "Get all collection names")]
 #[openapi(description = r#"
-Fetches collection stats
+Gets a list of all supported Collections
 "#)]
 pub async fn get_all_collections(#[data] pool: PgPool) -> Result<Json<Vec<String>>, Rejection> {
     println!("/get_all_collections/");
@@ -140,10 +140,10 @@ pub async fn get_all_collections(#[data] pool: PgPool) -> Result<Json<Vec<String
 }
 
 #[get("/wallet/{collection_slug}/{wallet}")]
-#[openapi(tags("system"))]
-#[openapi(summary = "Get Token Pricing Profile")]
+#[openapi(tags("Wallet"))]
+#[openapi(summary = "Get Wallet profile")]
 #[openapi(description = r#"
-Fetches wallet stats
+Gets all pricings for tokens in collection in wallet and get total amounts
 "#)]
 pub async fn get_wallet_profile(
     #[data] pool: PgPool,

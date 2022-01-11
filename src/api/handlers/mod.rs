@@ -7,7 +7,7 @@ use rweb::*;
 use sqlx::PgPool;
 
 #[get("/status")]
-#[openapi(tags("system"))]
+#[openapi(tags("System"))]
 #[openapi(summary = "Healthcheck")]
 #[openapi(description = r#"
 Checks db connectivity, returns "OK" on success
