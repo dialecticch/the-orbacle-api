@@ -35,15 +35,13 @@ pub async fn new_collection(
 ) -> Result<Json<()>, Rejection> {
     let req: NewCollectionBody = body.into_inner();
     println!("/new_collection/{}/{}", key, req.collection_slug);
-    let mut conn = pool.acquire().await.map_err(internal_error)?;
 
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
-
-    _store_collection(
-        &mut conn,
-        &req.collection_slug,
+    tokio::task::spawn(_store_collection(
+        pool,
+        req.collection_slug.clone(),
         req.total_supply_expected,
         req.rarity_cutoff_multiplier,
         req.ignored_trait_types_rarity
@@ -51,27 +49,26 @@ pub async fn new_collection(
             .map(|t| t.to_lowercase())
             .collect(),
         req.ignored_trait_types_overlap,
-    )
-    .await
-    .map_err(internal_error)?;
+    ));
     Ok(().into())
 }
 
 async fn _store_collection(
-    conn: &mut PgConnection,
-    collection_slug: &str,
+    pool: PgPool,
+    collection_slug: String,
     total_supply: usize,
     multiplier: f64,
     ignored_trait_types_rarity: Vec<String>,
     ignored_trait_types_overlap: Vec<String>,
 ) -> Result<()> {
+    let mut conn = pool.acquire().await?;
     let client = OpenseaAPIClient::new(1);
-    let collection = client.get_collection(collection_slug).await?;
+    let collection = client.get_collection(&collection_slug).await?;
 
     // println!("  Fetching assets...");
 
     let req = AssetsRequest::new()
-        .collection(collection_slug)
+        .collection(&collection_slug)
         .expected(total_supply)
         .build();
 
@@ -109,10 +106,10 @@ async fn _store_collection(
 
     let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&traits)?;
 
-    write_traits(conn, traits).await.unwrap_or_default();
+    write_traits(&mut conn, traits).await.unwrap_or_default();
 
     write_collection(
-        conn,
+        &mut conn,
         &collection.collection,
         collection_avg_trait_rarity,
         multiplier,
@@ -126,18 +123,19 @@ async fn _store_collection(
 
     println!("  Storing {} assets...", all_assets.len());
 
-    let processed = preprocess::process_assets(conn, all_assets.clone(), collection_slug).await?;
+    let processed =
+        preprocess::process_assets(&mut conn, all_assets.clone(), &collection_slug).await?;
 
     for a in &processed {
-        write_asset(conn, a).await.unwrap();
+        write_asset(&mut conn, a).await.unwrap();
     }
 
     let updated =
-        preprocess::generate_overlaps(processed, collection_slug, &ignored_trait_types_overlap)
+        preprocess::generate_overlaps(processed, &collection_slug, &ignored_trait_types_overlap)
             .await?;
 
     for a in &updated {
-        update_asset_overlap(conn, a).await.unwrap();
+        update_asset_overlap(&mut conn, a).await.unwrap();
     }
 
     println!("  Stored {} assets!", all_assets.len());
@@ -147,8 +145,8 @@ async fn _store_collection(
     for a in &all_assets {
         if a.sell_orders.is_some() {
             write_listing(
-                conn,
-                collection_slug,
+                &mut conn,
+                &collection_slug,
                 "sell_order",
                 a.token_id as i32,
                 Some(a.sell_orders.clone().unwrap()[0].current_price),
@@ -158,8 +156,8 @@ async fn _store_collection(
             .unwrap();
         } else {
             write_listing(
-                conn,
-                collection_slug,
+                &mut conn,
+                &collection_slug,
                 "sell_order",
                 a.token_id as i32,
                 None,
@@ -176,16 +174,16 @@ async fn _store_collection(
     let now = Utc::now();
 
     fetch_collection_listings(
-        conn,
-        collection_slug,
+        &mut conn,
+        &collection_slug,
         &(now - Duration::days(30)).naive_utc(),
     )
     .await
     .unwrap();
 
     fetch_collection_sales(
-        conn,
-        collection_slug,
+        &mut conn,
+        &collection_slug,
         Some(collection.collection.primary_asset_contracts[0].created_date),
     )
     .await
@@ -207,40 +205,37 @@ pub async fn update_collection(
 ) -> Result<Json<()>, Rejection> {
     let req: NewCollectionBody = body.into_inner();
     println!("/update_collection/{}/{}", key, req.collection_slug);
-    let mut conn = pool.acquire().await.map_err(internal_error)?;
 
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
-
-    _update_collection(
-        &mut conn,
-        &req.collection_slug,
+    tokio::task::spawn(_update_collection(
+        pool,
+        req.collection_slug.clone(),
         req.rarity_cutoff_multiplier,
         req.ignored_trait_types_rarity,
         req.ignored_trait_types_overlap,
-    )
-    .await
-    .map_err(internal_error)?;
+    ));
     Ok(().into())
 }
 
 async fn _update_collection(
-    conn: &mut PgConnection,
-    collection_slug: &str,
+    pool: PgPool,
+    collection_slug: String,
     multiplier: f64,
     ignored_trait_types_rarity: Vec<String>,
     ignored_trait_types_overlap: Vec<String>,
 ) -> Result<()> {
+    let mut conn = pool.acquire().await?;
     let client = OpenseaAPIClient::new(1);
-    let collection = client.get_collection(collection_slug).await?;
+    let collection = client.get_collection(&collection_slug).await?;
 
     println!("  Fetching assets...");
 
     let total_supply = collection.collection.stats.total_supply;
 
     let req = AssetsRequest::new()
-        .collection(collection_slug)
+        .collection(&collection_slug)
         .expected(total_supply as usize)
         .build();
 
@@ -280,7 +275,7 @@ async fn _update_collection(
     let collection_avg_trait_rarity = get_collection_avg_trait_rarity(&traits)?;
 
     update_collection_info(
-        conn,
+        &mut conn,
         &collection.collection.slug,
         total_supply,
         ignored_trait_types_rarity,
@@ -290,7 +285,7 @@ async fn _update_collection(
     .await
     .unwrap_or_default();
 
-    update_traits(conn, collection_slug, traits)
+    update_traits(&mut conn, &collection_slug, traits)
         .await
         .unwrap_or_default();
 
