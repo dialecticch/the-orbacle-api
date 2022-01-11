@@ -72,6 +72,7 @@ impl OpenseaAPIClient {
                 .header("Accept-Encoding", "application/json")
                 .header("x-api-key", dotenv::var("OPENSEA_API_KEY").unwrap())
                 .build()?;
+            println!(" {}", reqw.url());
             let response = self.client.execute(reqw).await?;
             Ok(response)
         })
