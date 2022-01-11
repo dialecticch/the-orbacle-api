@@ -257,7 +257,6 @@ pub async fn read_sales_for_collection_above_price_after_ts(
     price: f64,
     timestamp: &NaiveDateTime,
 ) -> Result<Vec<SaleEvent>> {
-    println!("{:?}", price);
     sqlx::query_as!(
         SaleEvent,
         r#"

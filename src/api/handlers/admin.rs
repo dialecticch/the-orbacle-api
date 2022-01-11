@@ -65,8 +65,6 @@ async fn _store_collection(
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(&collection_slug).await?;
 
-    // println!("  Fetching assets...");
-
     let req = AssetsRequest::new()
         .collection(&collection_slug)
         .expected(total_supply)
@@ -81,7 +79,6 @@ async fn _store_collection(
         .flatten()
         .flatten()
         .collect::<Vec<_>>();
-    println!("{:?}", traits_all.len());
 
     let traits_filtered: HashSet<Trait> = traits_all
         .into_iter()
@@ -119,10 +116,6 @@ async fn _store_collection(
     .await
     .unwrap_or_default();
 
-    println!("  Stored traits stats!");
-
-    println!("  Storing {} assets...", all_assets.len());
-
     let processed = preprocess::process_assets(all_assets.clone(), &collection_slug).await?;
 
     for a in &processed {
@@ -136,10 +129,6 @@ async fn _store_collection(
     for a in &updated {
         update_asset_overlap(&mut conn, a).await.unwrap();
     }
-
-    println!("  Stored {} assets!", all_assets.len());
-
-    println!("  Storing listings...");
 
     for a in &all_assets {
         if a.sell_orders.is_some() {
@@ -166,9 +155,6 @@ async fn _store_collection(
             .unwrap();
         }
     }
-    println!("  Stored {} Listings!", all_assets.len());
-
-    println!("  Fetching events...");
 
     let now = Utc::now();
 
@@ -187,6 +173,8 @@ async fn _store_collection(
     )
     .await
     .unwrap();
+
+    println!("Done storing!");
 
     Ok(())
 }
@@ -228,8 +216,6 @@ async fn _update_collection(
     let mut conn = pool.acquire().await?;
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(&collection_slug).await?;
-
-    println!("  Fetching assets...");
 
     let total_supply = collection.collection.stats.total_supply;
 
@@ -277,6 +263,8 @@ async fn _update_collection(
     update_traits(&mut conn, &collection_slug, traits)
         .await
         .unwrap_or_default();
+
+    println!("Done updating!");
 
     Ok(())
 }
