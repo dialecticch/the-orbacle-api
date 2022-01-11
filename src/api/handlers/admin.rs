@@ -1,7 +1,7 @@
 use super::super::errors::{internal_error, ServiceError};
 use crate::analyzers::rarities::get_collection_avg_trait_rarity;
 use crate::opensea::types::AssetsRequest;
-use crate::opensea::{types::Trait, OpenseaAPIClient};
+use crate::opensea::OpenseaAPIClient;
 use crate::storage::delete::*;
 use crate::storage::preprocess;
 use crate::storage::write::*;
@@ -11,7 +11,6 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use rweb::*;
 use sqlx::{PgConnection, PgPool};
-use std::collections::HashSet;
 
 #[derive(serde::Deserialize, rweb::Schema)]
 pub struct NewCollectionBody {
@@ -34,7 +33,7 @@ pub async fn new_collection(
     body: rweb::Json<NewCollectionBody>,
 ) -> Result<Json<()>, Rejection> {
     let req: NewCollectionBody = body.into_inner();
-    println!("/new_collection/{}/{}", key, req.collection_slug);
+    println!("/new_collection/{}", req.collection_slug);
 
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
@@ -72,22 +71,14 @@ async fn _store_collection(
 
     let all_assets = client.get_assets(req).await?;
 
-    let traits_all = all_assets
+    let traits = all_assets
         .clone()
         .iter()
         .map(|a| a.traits.clone())
         .flatten()
         .flatten()
-        .collect::<Vec<_>>();
-
-    let traits_filtered: HashSet<Trait> = traits_all
-        .into_iter()
         .filter(|t| t.trait_count.is_some())
         .filter(|t| !ignored_trait_types_rarity.contains(&t.trait_type.to_lowercase()))
-        .collect();
-
-    let traits: Vec<StorageTrait> = traits_filtered
-        .into_iter()
         .map(|t| StorageTrait {
             collection_slug: collection_slug.to_lowercase(),
             trait_id: format!(
@@ -191,7 +182,7 @@ pub async fn update_collection(
     body: rweb::Json<NewCollectionBody>,
 ) -> Result<Json<()>, Rejection> {
     let req: NewCollectionBody = body.into_inner();
-    println!("/update_collection/{}/{}", key, req.collection_slug);
+    println!("/update_collection/{}", req.collection_slug);
 
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
@@ -280,7 +271,7 @@ pub async fn delete_collection(
     #[header = "x-api-key"] key: String,
     collection_slug: String,
 ) -> Result<Json<()>, Rejection> {
-    println!("/delete_collection/{}/{}", key, collection_slug);
+    println!("/delete_collection/{}", collection_slug);
     let mut conn = pool.acquire().await.map_err(internal_error)?;
 
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
