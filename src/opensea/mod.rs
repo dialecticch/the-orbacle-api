@@ -63,27 +63,22 @@ impl OpenseaAPIClient {
             ..Default::default()
         };
 
-        let resp = retry(backoff, || async {
-            let reqw = self
+        let response = retry(backoff, || async {
+            let re = self
                 .client
                 .get(API_BASE.to_string() + path)
                 .query(&query)
                 .query(&extra_query)
                 .header("Accept-Encoding", "application/json")
-                .header("x-api-key", dotenv::var("OPENSEA_API_KEY").unwrap())
-                .build()?;
-            println!(" {}", reqw.url());
-            let response = self.client.execute(reqw).await?;
+                .header("x-api-key", dotenv::var("OPENSEA_API_KEY").unwrap());
+            let response = re.send().await?.error_for_status()?;
             Ok(response)
         })
         .await?;
-        match resp.status() {
-            StatusCode::OK => serde_json::from_str(&resp.text().await?).map_err(|e| e.into()),
-            _ => match resp.text().await {
-                Ok(text) => Err(anyhow!(text)),
-                Err(e) => Err(anyhow!(e)),
-            },
-        }
+
+        let response: R = response.json().await?;
+
+        Ok(response)
     }
 
     async fn fetch_assets_page(&self, req: AssetsRequest) -> Result<AssetsResponse> {

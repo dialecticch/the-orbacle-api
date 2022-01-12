@@ -169,7 +169,6 @@ pub async fn fetch_collection_transfers(
         .build();
 
     let mut transfers = client.get_events(req).await.unwrap();
-    println!("transfers: {:?}", transfers.len());
 
     transfers.sort_by(|a, b| a.created_date.cmp(&b.created_date));
     for e in &transfers {
@@ -187,11 +186,6 @@ pub async fn fetch_collection_transfers(
                 // Bundles dont have an asset, we ignore bundle transfers
                 continue;
             };
-            println!(
-                "{:?} -> {:?}",
-                e.asset.as_ref().unwrap().token_id,
-                e.to_account
-            );
             write_transfer(conn, token_id, new_owner, collection_slug)
                 .await
                 .unwrap_or_default();
