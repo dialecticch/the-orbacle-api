@@ -59,11 +59,29 @@ pub async fn get_most_valued_trait_floor(
             }
         }
     }
-    Ok(if highest_floor != TraitFloor::default() {
-        Some(highest_floor)
+    if highest_floor != TraitFloor::default() {
+        Ok(Some(highest_floor))
     } else {
-        None
-    })
+        // in case nothing has a floor try again with all traits without filtering
+        token_traits_filtered = token_traits.clone();
+        let mut highest_floor = TraitFloor::default();
+        for t in token_traits_filtered {
+            let trait_listings = get_trait_listings(conn, collection_slug, &t.trait_id).await?;
+            if !trait_listings.is_empty() && trait_listings[0].price > highest_floor.floor_price {
+                highest_floor = TraitFloor {
+                    trait_id: t.trait_id.clone(),
+                    token_id: trait_listings[0].token_id,
+                    floor_price: trait_listings[0].price,
+                }
+            }
+        }
+
+        if highest_floor != TraitFloor::default() {
+            Ok(Some(highest_floor))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 pub async fn get_rarest_trait_floor(
