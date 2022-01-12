@@ -120,7 +120,9 @@ pub async fn fetch_collection_sales(
         .occurred_after(&occurred_after)
         .build();
 
-    let sales = client.get_events(req).await.unwrap();
+    let mut sales = client.get_events(req).await.unwrap();
+
+    sales.sort_by(|a, b| a.created_date.cmp(&b.created_date));
     for e in &sales {
         if let Some(p) = e.payment_token.clone() {
             if p.symbol == "ETH" {
