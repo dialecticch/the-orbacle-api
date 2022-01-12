@@ -50,6 +50,14 @@ pub async fn update_db(
             )
             .await
             .unwrap_or_default();
+
+            fetch_collection_transfers(
+                &mut conn,
+                &collection.slug,
+                NaiveDateTime::from_timestamp(latest_sale as i64, 0),
+            )
+            .await
+            .unwrap_or_default();
         }
     }
 }

@@ -280,6 +280,27 @@ pub async fn write_sale(
     Ok(())
 }
 
+pub async fn write_transfer(
+    conn: &mut PgConnection,
+    token_id: i32,
+    new_owner: String,
+    collection_slug: &str,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+        update asset
+            set owner = $1
+        where collection_slug = $2 and token_id=$3
+        "#,
+        new_owner,
+        collection_slug.to_lowercase(),
+        token_id,
+    )
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
 // ============ LISTINGS ============
 pub async fn write_listing(
     conn: &mut PgConnection,

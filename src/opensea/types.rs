@@ -273,12 +273,19 @@ impl Default for AssetsRequest {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct ToAccount {
+    pub address: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Event {
     pub asset: Option<EmbeddedAsset>,
     pub total_price: Option<String>,
     pub ending_price: Option<String>,
     pub created_date: NaiveDateTime,
-    pub payment_token: PaymentToken,
+    pub payment_token: Option<PaymentToken>,
+    pub to_account: Option<ToAccount>,
+    pub winner_account: Option<ToAccount>,
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct EventsResponse {

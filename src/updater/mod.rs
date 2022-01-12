@@ -122,8 +122,75 @@ pub async fn fetch_collection_sales(
 
     let sales = client.get_events(req).await.unwrap();
     for e in &sales {
-        if e.payment_token.symbol == "ETH" {
-            write_sale(conn, e, collection_slug)
+        if let Some(p) = e.payment_token.clone() {
+            if p.symbol == "ETH" {
+                write_sale(conn, e, collection_slug)
+                    .await
+                    .unwrap_or_default();
+
+                let token_id = if e.asset.is_some() {
+                    e.asset.as_ref().unwrap().token_id as i32
+                } else {
+                    continue;
+                };
+
+                let new_owner = if e.winner_account.is_some() {
+                    e.winner_account.as_ref().unwrap().address.clone()
+                } else {
+                    continue;
+                };
+
+                write_transfer(conn, token_id, new_owner, collection_slug)
+                    .await
+                    .unwrap_or_default();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn fetch_collection_transfers(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    occurred_after: NaiveDateTime,
+) -> Result<()> {
+    let collection = read_collection(conn, collection_slug).await.unwrap();
+
+    let client = OpenseaAPIClient::new(1);
+
+    let req = EventsRequest::new()
+        .asset_contract_address(&collection.address)
+        .event_type("transfer")
+        .chunk_size(7)
+        .occurred_after(&occurred_after)
+        .build();
+
+    let mut transfers = client.get_events(req).await.unwrap();
+    println!("transfers: {:?}", transfers.len());
+
+    transfers.sort_by(|a, b| a.created_date.cmp(&b.created_date));
+    for e in &transfers {
+        if e.to_account.is_some() {
+            let token_id = if e.asset.is_some() {
+                e.asset.as_ref().unwrap().token_id as i32
+            } else {
+                // Bundles dont have an asset, we ignore bundle transfers
+                continue;
+            };
+
+            let new_owner = if e.to_account.is_some() {
+                e.to_account.as_ref().unwrap().address.clone()
+            } else {
+                // Bundles dont have an asset, we ignore bundle transfers
+                continue;
+            };
+            println!(
+                "{:?} -> {:?}",
+                e.asset.as_ref().unwrap().token_id,
+                e.to_account
+            );
+            write_transfer(conn, token_id, new_owner, collection_slug)
                 .await
                 .unwrap_or_default();
         }
