@@ -11,7 +11,7 @@ async fn main() {
 
     // run the updater in the background
     let lim =
-        RateLimiter::direct(Quota::with_period(std::time::Duration::from_secs(3600u64)).unwrap());
+        RateLimiter::direct(Quota::with_period(std::time::Duration::from_secs(600u64)).unwrap());
     tokio::task::spawn(update_db(lim));
 
     println!("Starting server...");
