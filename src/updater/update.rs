@@ -46,7 +46,7 @@ pub async fn update_db(
             fetch_collection_sales(
                 &mut conn,
                 &collection.slug,
-                Some(NaiveDateTime::from_timestamp(latest_sale as i64, 0)),
+                NaiveDateTime::from_timestamp(latest_sale as i64, 0),
             )
             .await
             .unwrap_or_default();

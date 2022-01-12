@@ -177,9 +177,13 @@ async fn _store_collection(
     .await
     .unwrap();
 
-    fetch_collection_sales(&mut conn, &collection_slug, None)
-        .await
-        .unwrap();
+    fetch_collection_sales(
+        &mut conn,
+        &collection_slug,
+        collection.collection.primary_asset_contracts[0].created_date,
+    )
+    .await
+    .unwrap();
 
     Ok(())
 }

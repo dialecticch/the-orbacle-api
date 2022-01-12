@@ -107,25 +107,18 @@ pub async fn fetch_collection_listings(
 pub async fn fetch_collection_sales(
     conn: &mut PgConnection,
     collection_slug: &str,
-    occurred_after: Option<NaiveDateTime>,
+    occurred_after: NaiveDateTime,
 ) -> Result<()> {
     let collection = read_collection(conn, collection_slug).await.unwrap();
 
     let client = OpenseaAPIClient::new(1);
 
-    let req = match occurred_after {
-        Some(t) => EventsRequest::new()
-            .asset_contract_address(&collection.address)
-            .event_type("successful")
-            .chunk_size(7)
-            .occurred_after(&t)
-            .build(),
-        None => EventsRequest::new()
-            .asset_contract_address(&collection.address)
-            .event_type("successful")
-            .chunk_size(7)
-            .build(),
-    };
+    let req = EventsRequest::new()
+        .asset_contract_address(&collection.address)
+        .event_type("successful")
+        .chunk_size(7)
+        .occurred_after(&occurred_after)
+        .build();
 
     let sales = client.get_events(req).await.unwrap();
     for e in &sales {
