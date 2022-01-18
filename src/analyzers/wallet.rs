@@ -2,7 +2,7 @@ use crate::analyzers::{prices::get_most_valued_trait_floor, rarities::get_trait_
 use crate::opensea::{types::AssetsRequest, OpenseaAPIClient};
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::storage::read::read_collection;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use futures::StreamExt;
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -45,7 +45,9 @@ pub async fn get_value_for_wallet(
     while let Some(result) = stream.next().await {
         match result {
             Ok(resp) => {
-                results.push(resp);
+                if let Some(r) = resp {
+                    results.push(r);
+                }
             }
             Err(e) => {
                 println!("Error: {:?}", e);
@@ -75,13 +77,15 @@ async fn _get_profile(
     collection_slug: &str,
     token_id: i32,
     cutoff: f64,
-) -> Result<(i32, PriceProfile)> {
+) -> Result<Option<(i32, PriceProfile)>> {
     let mut conn = pool.acquire().await?;
     let token_traits = get_trait_rarities(&mut conn, collection_slug, token_id).await?;
 
     if token_traits.is_empty() {
-        return Err(anyhow!("no traits"));
+        return Ok(None);
     }
+
+    println!("{}", token_id);
 
     let rarest_trait = token_traits[0].trait_id.clone();
 
@@ -101,5 +105,5 @@ async fn _get_profile(
     .await
     .unwrap();
 
-    Ok((token_id, profile))
+    Ok(Some((token_id, profile)))
 }
