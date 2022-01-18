@@ -84,6 +84,9 @@ async fn _get_price_profile(
     let collection = read_collection(conn, &collection_slug).await?;
 
     let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
+    if token_traits.is_empty() {
+        return Ok(PriceProfile::default());
+    }
 
     let rarest_trait = token_traits[0].trait_id.clone();
 

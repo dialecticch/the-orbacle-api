@@ -5,7 +5,7 @@ use crate::custom::read_custom_price;
 use anyhow::Result;
 use sqlx::PgConnection;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone, Default)]
 pub struct PriceProfile {
     pub collection_floor: f64,
     pub last_sale: Option<f64>,
