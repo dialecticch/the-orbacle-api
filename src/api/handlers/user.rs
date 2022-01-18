@@ -71,7 +71,7 @@ pub async fn get_price_profile(
 }
 
 #[cached(
-    size = 25,
+    size = 1_000_000,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}", collection_slug, token_id) }"#

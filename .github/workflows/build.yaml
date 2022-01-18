@@ -1,8 +1,5 @@
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - develop
 
 name: build-push docker image
 jobs:
@@ -75,7 +72,7 @@ jobs:
           password: ${{ secrets.DO_TOKEN }}
           push: true
           registry: registry.digitalocean.com
-          repository: sovreign/the-orbacle-api
+          repository: dialectic/the-orbacle-api
           tags: latest
 
       # yeah, this is ugly, I know.
