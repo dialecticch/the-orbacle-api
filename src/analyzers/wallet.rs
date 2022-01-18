@@ -3,6 +3,7 @@ use crate::opensea::{types::AssetsRequest, OpenseaAPIClient};
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::storage::read::read_collection;
 use anyhow::Result;
+use cached::proc_macro::cached;
 use futures::StreamExt;
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -72,6 +73,12 @@ pub async fn get_value_for_wallet(
     ))
 }
 
+#[cached(
+    size = 10_000,
+    result = true,
+    key = "String",
+    convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
+)]
 async fn _get_profile(
     pool: PgPool,
     collection_slug: &str,
