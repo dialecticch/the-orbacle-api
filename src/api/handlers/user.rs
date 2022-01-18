@@ -156,9 +156,8 @@ pub async fn get_wallet_profile(
     collection_slug: String,
 ) -> Result<Json<WalletProfile>, Rejection> {
     println!("/get_wallet/{}/{}", collection_slug, wallet);
-    let mut conn = pool.acquire().await.map_err(internal_error)?;
 
-    _get_wallet_profile(&mut conn, collection_slug, wallet)
+    _get_wallet_profile(pool, collection_slug, wallet)
         .await
         .map(|r| r.into())
         .map_err(internal_error)
@@ -171,9 +170,9 @@ pub async fn get_wallet_profile(
     convert = r#"{ format!("{}{}", collection_slug, wallet) }"#
 )]
 pub async fn _get_wallet_profile(
-    conn: &mut PgConnection,
+    pool: PgPool,
     collection_slug: String,
     wallet: String,
 ) -> Result<WalletProfile> {
-    WalletProfile::make(conn, &collection_slug, &wallet).await
+    WalletProfile::make(pool, &collection_slug, &wallet).await
 }

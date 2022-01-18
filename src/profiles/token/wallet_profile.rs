@@ -2,7 +2,7 @@ use super::price_profile::PriceProfile;
 use crate::analyzers::wallet::get_value_for_wallet;
 use crate::storage::read::read_asset;
 use anyhow::Result;
-use sqlx::PgConnection;
+use sqlx::PgPool;
 use std::collections::HashMap;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
@@ -20,18 +20,14 @@ pub struct WalletProfile {
 }
 
 impl WalletProfile {
-    pub async fn make(
-        conn: &mut PgConnection,
-        collection_slug: &str,
-        wallet: &str,
-    ) -> Result<Self> {
+    pub async fn make(pool: PgPool, collection_slug: &str, wallet: &str) -> Result<Self> {
+        let mut conn = pool.acquire().await?;
         let (value_max, value_min, value_avg, address, profiles) =
-            get_value_for_wallet(conn, collection_slug, wallet).await?;
+            get_value_for_wallet(pool, collection_slug, wallet).await?;
 
         let mut tokens = HashMap::<String, TokensInner>::new();
-
         for (t, p) in profiles {
-            let asset = read_asset(conn, collection_slug, t.parse::<i32>().unwrap()).await?;
+            let asset = read_asset(&mut conn, collection_slug, t.parse::<i32>().unwrap()).await?;
             tokens.insert(
                 t.clone(),
                 TokensInner {

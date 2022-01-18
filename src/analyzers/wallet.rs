@@ -2,18 +2,19 @@ use crate::analyzers::{prices::get_most_valued_trait_floor, rarities::get_trait_
 use crate::opensea::{types::AssetsRequest, OpenseaAPIClient};
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::storage::read::read_collection;
-use anyhow::Result;
-use sqlx::PgConnection;
+use anyhow::{anyhow, Result};
+use futures::StreamExt;
+use sqlx::PgPool;
 use std::collections::HashMap;
 
 pub async fn get_value_for_wallet(
-    conn: &mut PgConnection,
+    pool: PgPool,
     collection_slug: &str,
     wallet: &str,
 ) -> Result<(f64, f64, f64, String, HashMap<String, PriceProfile>)> {
     let client = OpenseaAPIClient::new(2);
-
-    let collection = read_collection(conn, collection_slug).await?;
+    let mut conn = pool.acquire().await?;
+    let collection = read_collection(&mut conn, collection_slug).await?;
 
     let req = AssetsRequest::new()
         .asset_contract_address(&collection.address)
@@ -28,40 +29,36 @@ pub async fn get_value_for_wallet(
     let mut value_min = 0f64;
     let mut value_avg = 0f64;
     let mut map = HashMap::<String, PriceProfile>::new();
-    for token_id in ids {
-        let token_traits = get_trait_rarities(conn, collection_slug, token_id).await?;
+    let mut stream = futures::stream::iter(0..ids.len())
+        .map(|i| {
+            _get_profile(
+                pool.clone(),
+                collection_slug,
+                ids[i],
+                collection.rarity_cutoff,
+            )
+        })
+        .buffer_unordered(6);
 
-        if token_traits.is_empty() {
-            continue;
+    let mut results = vec![];
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(resp) => {
+                results.push(resp);
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+            }
         }
+    }
 
-        let rarest_trait = token_traits[0].trait_id.clone();
+    for profile in results {
+        value_max += profile.1.custom_price.unwrap_or(profile.1.max_price);
+        value_min += profile.1.custom_price.unwrap_or(profile.1.min_price);
+        value_avg += profile.1.custom_price.unwrap_or(profile.1.avg_price);
 
-        let most_valuable_trait = get_most_valued_trait_floor(
-            conn,
-            collection_slug,
-            token_traits.clone(),
-            collection.rarity_cutoff,
-        )
-        .await?;
-
-        let profile = PriceProfile::make(
-            conn,
-            &collection.slug,
-            token_id as i32,
-            token_traits,
-            &rarest_trait,
-            &most_valuable_trait,
-            collection.rarity_cutoff,
-        )
-        .await
-        .unwrap();
-
-        value_max += profile.custom_price.unwrap_or(profile.max_price);
-        value_min += profile.custom_price.unwrap_or(profile.min_price);
-        value_avg += profile.custom_price.unwrap_or(profile.avg_price);
-
-        map.insert(token_id.to_string(), profile);
+        map.insert(profile.0.to_string(), profile.1);
     }
 
     Ok((
@@ -71,4 +68,38 @@ pub async fn get_value_for_wallet(
         collection.address.clone(),
         map,
     ))
+}
+
+async fn _get_profile(
+    pool: PgPool,
+    collection_slug: &str,
+    token_id: i32,
+    cutoff: f64,
+) -> Result<(i32, PriceProfile)> {
+    let mut conn = pool.acquire().await?;
+    let token_traits = get_trait_rarities(&mut conn, collection_slug, token_id).await?;
+
+    if token_traits.is_empty() {
+        return Err(anyhow!("no traits"));
+    }
+
+    let rarest_trait = token_traits[0].trait_id.clone();
+
+    let most_valuable_trait =
+        get_most_valued_trait_floor(&mut conn, collection_slug, token_traits.clone(), cutoff)
+            .await?;
+
+    let profile = PriceProfile::make(
+        &mut conn,
+        collection_slug,
+        token_id as i32,
+        token_traits,
+        &rarest_trait,
+        &most_valuable_trait,
+        cutoff,
+    )
+    .await
+    .unwrap();
+
+    Ok((token_id, profile))
 }
