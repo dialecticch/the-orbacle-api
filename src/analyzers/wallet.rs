@@ -18,8 +18,6 @@ pub async fn get_value_for_wallet(
     let mut conn = pool.acquire().await?;
     let collection = read_collection(&mut conn, collection_slug).await?;
 
-    println!("{:?}", collection);
-
     let req = AssetsRequest::new()
         .asset_contract_address(&collection.address)
         .owner(wallet)
