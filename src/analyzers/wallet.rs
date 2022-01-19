@@ -1,4 +1,5 @@
 use crate::analyzers::{prices::get_most_valued_trait_floor, rarities::get_trait_rarities};
+use crate::custom::read_custom_price;
 use crate::opensea::{types::AssetsRequest, OpenseaAPIClient};
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::storage::read::read_collection;
@@ -16,6 +17,8 @@ pub async fn get_value_for_wallet(
     let client = OpenseaAPIClient::new(2);
     let mut conn = pool.acquire().await?;
     let collection = read_collection(&mut conn, collection_slug).await?;
+
+    println!("{:?}", collection);
 
     let req = AssetsRequest::new()
         .asset_contract_address(&collection.address)
@@ -57,9 +60,9 @@ pub async fn get_value_for_wallet(
     }
 
     for profile in results {
-        value_max += profile.1.custom_price.unwrap_or(profile.1.max_price);
-        value_min += profile.1.custom_price.unwrap_or(profile.1.min_price);
-        value_avg += profile.1.custom_price.unwrap_or(profile.1.avg_price);
+        value_max += profile.1.max_price;
+        value_min += profile.1.min_price;
+        value_avg += profile.1.avg_price;
 
         map.insert(profile.0.to_string(), profile.1);
     }
@@ -85,14 +88,22 @@ async fn _get_profile(
     token_id: i32,
     cutoff: f64,
 ) -> Result<Option<(i32, PriceProfile)>> {
+    // if there is a custom price short-circuit
+    if let Some(price) = read_custom_price(collection_slug, token_id)? {
+        let mut p = PriceProfile::default();
+        p.max_price = price;
+        p.min_price = price;
+        p.avg_price = price;
+
+        return Ok(Some((token_id, p)));
+    }
+
     let mut conn = pool.acquire().await?;
     let token_traits = get_trait_rarities(&mut conn, collection_slug, token_id).await?;
 
     if token_traits.is_empty() {
         return Ok(None);
     }
-
-    println!("{}", token_id);
 
     let rarest_trait = token_traits[0].trait_id.clone();
 

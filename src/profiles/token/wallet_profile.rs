@@ -45,4 +45,28 @@ impl WalletProfile {
             tokens,
         })
     }
+
+    pub async fn make_minimal(pool: PgPool, collection_slug: &str, wallet: &str) -> Result<Self> {
+        let (value_max, value_min, value_avg, address, profiles) =
+            get_value_for_wallet(pool, collection_slug, wallet).await?;
+
+        let mut tokens = HashMap::<String, TokensInner>::new();
+        for (t, p) in profiles {
+            tokens.insert(
+                t.clone(),
+                TokensInner {
+                    img: String::default(),
+                    opensea: format!("https://opensea.io/assets/{}/{}", address, t),
+                    price_profile: p,
+                },
+            );
+        }
+
+        Ok(Self {
+            total_value_max: value_max,
+            total_value_min: value_min,
+            total_value_avg: value_avg,
+            tokens,
+        })
+    }
 }

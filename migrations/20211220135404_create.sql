@@ -33,6 +33,7 @@ CREATE TABLE COLLECTION (
     primary key (slug)
 );
 
+
 CREATE TABLE TRAIT (
     collection_slug VARCHAR NOT NULL,
     trait_id VARCHAR NOT NULL,
@@ -62,3 +63,10 @@ CREATE TABLE LISTING (
 
     primary key (collection_slug, token_id, timestamp)
 );
+
+
+CREATE INDEX collections_ordered ON collection(slug DESC);
+CREATE INDEX assets_ordered ON asset(collection_slug DESC, token_id DESC);
+CREATE INDEX traits_ordered ON trait(collection_slug DESC, trait_id DESC);
+CREATE INDEX sales_ordered ON sale(collection_slug DESC, timestamp DESC);
+CREATE INDEX listings_ordered ON listing(collection_slug DESC, timestamp DESC);

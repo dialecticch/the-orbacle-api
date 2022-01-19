@@ -188,6 +188,60 @@ async fn _store_collection(
     Ok(())
 }
 
+#[post("/admin/collection_minimal/")]
+#[openapi(tags("Admin"))]
+#[openapi(summary = "Add Minimal collection Info")]
+#[openapi(description = r#"
+Fetches and stores only the metadata of a collection
+"#)]
+pub async fn new_collection_minimal(
+    #[data] pool: PgPool,
+    #[header = "x-api-key"] key: String,
+    body: rweb::Json<NewCollectionBody>,
+) -> Result<Json<()>, Rejection> {
+    let req: NewCollectionBody = body.into_inner();
+    println!("/new_collection_minimal/{}", req.collection_slug);
+    if key != dotenv::var("ADMIN_API_KEY").unwrap() {
+        return Err(warp::reject::custom(ServiceError::Unauthorized));
+    }
+    tokio::task::spawn(_store_collection_minimal(
+        pool,
+        req.collection_slug.clone(),
+        req.rarity_cutoff_multiplier,
+        req.ignored_trait_types_rarity
+            .into_iter()
+            .map(|t| t.to_lowercase())
+            .collect(),
+        req.ignored_trait_types_overlap,
+    ));
+    Ok(().into())
+}
+
+async fn _store_collection_minimal(
+    pool: PgPool,
+    collection_slug: String,
+    multiplier: f64,
+    ignored_trait_types_rarity: Vec<String>,
+    ignored_trait_types_overlap: Vec<String>,
+) -> Result<()> {
+    let client = OpenseaAPIClient::new(1);
+    let collection = client.get_collection(&collection_slug).await?;
+    let mut conn = pool.acquire().await?;
+
+    write_collection(
+        &mut conn,
+        &collection.collection,
+        0f64,
+        multiplier,
+        ignored_trait_types_rarity.clone(),
+        ignored_trait_types_overlap.clone(),
+    )
+    .await
+    .unwrap_or_default();
+
+    Ok(())
+}
+
 #[patch("/admin/collection/")]
 #[openapi(tags("Admin"))]
 #[openapi(summary = "Update values in a new collection")]

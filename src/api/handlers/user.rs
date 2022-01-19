@@ -1,6 +1,7 @@
 use super::super::errors::internal_error;
 use crate::analyzers::prices::get_most_valued_trait_floor;
 use crate::analyzers::rarities::get_trait_rarities;
+use crate::custom::read_custom_price;
 use crate::profiles::token::collection_profile::CollectionProfile;
 use crate::profiles::token::price_profile::PriceProfile;
 use crate::profiles::token::token_profile::TokenProfile;
@@ -81,6 +82,15 @@ async fn _get_price_profile(
     collection_slug: String,
     token_id: i32,
 ) -> Result<PriceProfile> {
+    // if there is a custom price short-circuit
+    if let Some(price) = read_custom_price(&collection_slug, token_id)? {
+        let mut p = PriceProfile::default();
+        p.max_price = price;
+        p.min_price = price;
+        p.avg_price = price;
+
+        return Ok(p);
+    }
     let collection = read_collection(conn, &collection_slug).await?;
 
     let token_traits = get_trait_rarities(conn, &collection_slug, token_id).await?;
@@ -178,4 +188,37 @@ pub async fn _get_wallet_profile(
     wallet: String,
 ) -> Result<WalletProfile> {
     WalletProfile::make(pool, &collection_slug, &wallet).await
+}
+
+#[get("/wallet_minimal/{collection_slug}/{wallet}")]
+#[openapi(tags("Wallet"))]
+#[openapi(summary = "Get Minimal Wallet profile")]
+#[openapi(description = r#"
+Gets just minimal pricing infor for all assets of collection in wallet
+"#)]
+pub async fn get_wallet_profile_minimal(
+    #[data] pool: PgPool,
+    wallet: String,
+    collection_slug: String,
+) -> Result<Json<WalletProfile>, Rejection> {
+    println!("/get_wallet/{}/{}", collection_slug, wallet);
+
+    _get_wallet_profile_minimal(pool, collection_slug, wallet)
+        .await
+        .map(|r| r.into())
+        .map_err(internal_error)
+}
+
+#[cached(
+    size = 25,
+    result = true,
+    key = "String",
+    convert = r#"{ format!("{}{}", collection_slug, wallet) }"#
+)]
+pub async fn _get_wallet_profile_minimal(
+    pool: PgPool,
+    collection_slug: String,
+    wallet: String,
+) -> Result<WalletProfile> {
+    WalletProfile::make_minimal(pool, &collection_slug, &wallet).await
 }

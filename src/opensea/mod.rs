@@ -71,6 +71,10 @@ impl OpenseaAPIClient {
                 .query(&extra_query)
                 .header("Accept-Encoding", "application/json")
                 .header("x-api-key", dotenv::var("OPENSEA_API_KEY").unwrap());
+            println!(
+                "{:?}",
+                API_BASE.to_string() + path + &serde_json::to_string(query).unwrap()
+            );
             let response = re.send().await?.error_for_status()?;
             Ok(response)
         })
