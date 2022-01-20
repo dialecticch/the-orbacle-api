@@ -173,7 +173,7 @@ Gets all pricings for tokens in collection in wallet and get total amounts
 "#)]
 pub async fn get_wallet_profile(
     #[data] pool: PgPool,
-    body: rweb::Json<WalletProfileRequest>,
+    body: rweb::Query<WalletProfileRequest>,
 ) -> Result<Json<WalletProfile>, Rejection> {
     let req: WalletProfileRequest = body.into_inner();
     println!("/get_wallet/{}/{}", req.collection_slug, req.wallet);
@@ -204,11 +204,11 @@ pub async fn _get_wallet_profile(
 #[openapi(tags("Wallet"))]
 #[openapi(summary = "Get Minimal Wallet profile")]
 #[openapi(description = r#"
-Gets just minimal pricing infor for all assets of collection in wallet
+Gets just minimal pricing info for all assets of collection in wallet
 "#)]
 pub async fn get_wallet_profile_minimal(
     #[data] pool: PgPool,
-    body: rweb::Json<WalletProfileRequest>,
+    body: rweb::Query<WalletProfileRequest>,
 ) -> Result<Json<WalletProfile>, Rejection> {
     let req: WalletProfileRequest = body.into_inner();
     println!("/get_wallet/{}/{}", req.collection_slug, req.wallet);
