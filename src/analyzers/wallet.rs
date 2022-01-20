@@ -13,6 +13,8 @@ pub async fn get_value_for_wallet(
     pool: PgPool,
     collection_slug: &str,
     wallet: &str,
+    limit: i64,
+    offset: i64,
 ) -> Result<(f64, f64, f64, String, HashMap<String, PriceProfile>)> {
     let client = OpenseaAPIClient::new(2);
     let mut conn = pool.acquire().await?;
@@ -25,18 +27,26 @@ pub async fn get_value_for_wallet(
 
     let assets = client.get_assets(req).await?;
 
-    let ids = assets.into_iter().map(|a| a.token_id).collect::<Vec<_>>();
+    let mut ids = assets.into_iter().map(|a| a.token_id).collect::<Vec<_>>();
+
+    ids.sort();
+
+    let ids_to_take = ids
+        .into_iter()
+        .skip(offset as usize)
+        .take(limit as usize)
+        .collect::<Vec<_>>();
 
     let mut value_max = 0f64;
     let mut value_min = 0f64;
     let mut value_avg = 0f64;
     let mut map = HashMap::<String, PriceProfile>::new();
-    let mut stream = futures::stream::iter(0..ids.len())
+    let mut stream = futures::stream::iter(0..ids_to_take.len())
         .map(|i| {
             _get_profile(
                 pool.clone(),
                 collection_slug,
-                ids[i],
+                ids_to_take[i],
                 collection.rarity_cutoff,
             )
         })

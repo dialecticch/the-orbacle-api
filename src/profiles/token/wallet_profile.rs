@@ -20,10 +20,16 @@ pub struct WalletProfile {
 }
 
 impl WalletProfile {
-    pub async fn make(pool: PgPool, collection_slug: &str, wallet: &str) -> Result<Self> {
+    pub async fn make(
+        pool: PgPool,
+        collection_slug: &str,
+        wallet: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Self> {
         let mut conn = pool.acquire().await?;
         let (value_max, value_min, value_avg, address, profiles) =
-            get_value_for_wallet(pool, collection_slug, wallet).await?;
+            get_value_for_wallet(pool, collection_slug, wallet, limit, offset).await?;
 
         let mut tokens = HashMap::<String, TokensInner>::new();
         for (t, p) in profiles {
@@ -46,9 +52,15 @@ impl WalletProfile {
         })
     }
 
-    pub async fn make_minimal(pool: PgPool, collection_slug: &str, wallet: &str) -> Result<Self> {
+    pub async fn make_minimal(
+        pool: PgPool,
+        collection_slug: &str,
+        wallet: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Self> {
         let (value_max, value_min, value_avg, address, profiles) =
-            get_value_for_wallet(pool, collection_slug, wallet).await?;
+            get_value_for_wallet(pool, collection_slug, wallet, limit, offset).await?;
 
         let mut tokens = HashMap::<String, TokensInner>::new();
         for (t, p) in profiles {

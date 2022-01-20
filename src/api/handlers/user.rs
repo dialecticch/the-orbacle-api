@@ -157,7 +157,15 @@ pub async fn get_all_collections(
         .map_err(internal_error)
 }
 
-#[get("/wallet/{collection_slug}/{wallet}")]
+#[derive(serde::Deserialize, rweb::Schema)]
+pub struct WalletProfileRequest {
+    pub collection_slug: String,
+    pub wallet: String,
+    pub limit: i64,
+    pub offset: i64,
+}
+
+#[get("/wallet")]
 #[openapi(tags("Wallet"))]
 #[openapi(summary = "Get Wallet profile")]
 #[openapi(description = r#"
@@ -165,12 +173,12 @@ Gets all pricings for tokens in collection in wallet and get total amounts
 "#)]
 pub async fn get_wallet_profile(
     #[data] pool: PgPool,
-    wallet: String,
-    collection_slug: String,
+    body: rweb::Json<WalletProfileRequest>,
 ) -> Result<Json<WalletProfile>, Rejection> {
-    println!("/get_wallet/{}/{}", collection_slug, wallet);
+    let req: WalletProfileRequest = body.into_inner();
+    println!("/get_wallet/{}/{}", req.collection_slug, req.wallet);
 
-    _get_wallet_profile(pool, collection_slug, wallet)
+    _get_wallet_profile(pool, req.collection_slug, req.wallet, req.limit, req.offset)
         .await
         .map(|r| r.into())
         .map_err(internal_error)
@@ -180,17 +188,19 @@ pub async fn get_wallet_profile(
     size = 25,
     result = true,
     key = "String",
-    convert = r#"{ format!("{}{}", collection_slug, wallet) }"#
+    convert = r#"{ format!("{}{}{}{}", collection_slug, wallet, limit, offset) }"#
 )]
 pub async fn _get_wallet_profile(
     pool: PgPool,
     collection_slug: String,
     wallet: String,
+    limit: i64,
+    offset: i64,
 ) -> Result<WalletProfile> {
-    WalletProfile::make(pool, &collection_slug, &wallet).await
+    WalletProfile::make(pool, &collection_slug, &wallet, limit, offset).await
 }
 
-#[get("/wallet_minimal/{collection_slug}/{wallet}")]
+#[get("/wallet_minimal")]
 #[openapi(tags("Wallet"))]
 #[openapi(summary = "Get Minimal Wallet profile")]
 #[openapi(description = r#"
@@ -198,12 +208,12 @@ Gets just minimal pricing infor for all assets of collection in wallet
 "#)]
 pub async fn get_wallet_profile_minimal(
     #[data] pool: PgPool,
-    wallet: String,
-    collection_slug: String,
+    body: rweb::Json<WalletProfileRequest>,
 ) -> Result<Json<WalletProfile>, Rejection> {
-    println!("/get_wallet/{}/{}", collection_slug, wallet);
+    let req: WalletProfileRequest = body.into_inner();
+    println!("/get_wallet/{}/{}", req.collection_slug, req.wallet);
 
-    _get_wallet_profile_minimal(pool, collection_slug, wallet)
+    _get_wallet_profile_minimal(pool, req.collection_slug, req.wallet, req.limit, req.offset)
         .await
         .map(|r| r.into())
         .map_err(internal_error)
@@ -213,12 +223,14 @@ pub async fn get_wallet_profile_minimal(
     size = 25,
     result = true,
     key = "String",
-    convert = r#"{ format!("{}{}", collection_slug, wallet) }"#
+    convert = r#"{ format!("{}{}{}{}", collection_slug, wallet, limit, offset) }"#
 )]
 pub async fn _get_wallet_profile_minimal(
     pool: PgPool,
     collection_slug: String,
     wallet: String,
+    limit: i64,
+    offset: i64,
 ) -> Result<WalletProfile> {
-    WalletProfile::make_minimal(pool, &collection_slug, &wallet).await
+    WalletProfile::make_minimal(pool, &collection_slug, &wallet, limit, offset).await
 }
