@@ -176,7 +176,10 @@ pub async fn get_wallet_profile(
     body: rweb::Query<WalletProfileRequest>,
 ) -> Result<Json<WalletProfile>, Rejection> {
     let req: WalletProfileRequest = body.into_inner();
-    println!("/get_wallet/{}/{}", req.collection_slug, req.wallet);
+    println!(
+        "/get_wallet/{}/{}/{}/{}",
+        req.collection_slug, req.wallet, req.limit, req.offset
+    );
 
     _get_wallet_profile(pool, req.collection_slug, req.wallet, req.limit, req.offset)
         .await
@@ -211,7 +214,10 @@ pub async fn get_wallet_profile_minimal(
     body: rweb::Query<WalletProfileRequest>,
 ) -> Result<Json<WalletProfile>, Rejection> {
     let req: WalletProfileRequest = body.into_inner();
-    println!("/get_wallet/{}/{}", req.collection_slug, req.wallet);
+    println!(
+        "/get_wallet/{}/{}/{}/{}",
+        req.collection_slug, req.wallet, req.limit, req.offset
+    );
 
     _get_wallet_profile_minimal(pool, req.collection_slug, req.wallet, req.limit, req.offset)
         .await

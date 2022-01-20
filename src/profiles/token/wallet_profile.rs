@@ -13,6 +13,7 @@ pub struct TokensInner {
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, rweb::Schema, Clone)]
 pub struct WalletProfile {
+    pub total_tokens: usize,
     pub total_value_max: f64,
     pub total_value_min: f64,
     pub total_value_avg: f64,
@@ -28,7 +29,7 @@ impl WalletProfile {
         offset: i64,
     ) -> Result<Self> {
         let mut conn = pool.acquire().await?;
-        let (value_max, value_min, value_avg, address, profiles) =
+        let (value_max, value_min, value_avg, address, profiles, total_tokens) =
             get_value_for_wallet(pool, collection_slug, wallet, limit, offset).await?;
 
         let mut tokens = HashMap::<String, TokensInner>::new();
@@ -45,6 +46,7 @@ impl WalletProfile {
         }
 
         Ok(Self {
+            total_tokens,
             total_value_max: value_max,
             total_value_min: value_min,
             total_value_avg: value_avg,
@@ -59,7 +61,7 @@ impl WalletProfile {
         limit: i64,
         offset: i64,
     ) -> Result<Self> {
-        let (value_max, value_min, value_avg, address, profiles) =
+        let (value_max, value_min, value_avg, address, profiles, total_tokens) =
             get_value_for_wallet(pool, collection_slug, wallet, limit, offset).await?;
 
         let mut tokens = HashMap::<String, TokensInner>::new();
@@ -75,6 +77,7 @@ impl WalletProfile {
         }
 
         Ok(Self {
+            total_tokens,
             total_value_max: value_max,
             total_value_min: value_min,
             total_value_avg: value_avg,

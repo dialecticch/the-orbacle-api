@@ -7,8 +7,14 @@ use rweb::*;
 pub async fn start() {
     let pool = establish_connection().await;
     let cors = warp::cors()
+        .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "PATCH", "DELETE"])
-        .allow_headers(["Authorization", "Content-Type"])
+        .allow_headers([
+            "Authorization",
+            "Content-Type",
+            "Cache-Control",
+            "Keep-Alive",
+        ])
         .max_age(86400);
 
     let endpoint = dotenv::var("ENDPOINT").unwrap();

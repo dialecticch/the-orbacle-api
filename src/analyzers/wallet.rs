@@ -15,7 +15,7 @@ pub async fn get_value_for_wallet(
     wallet: &str,
     limit: i64,
     offset: i64,
-) -> Result<(f64, f64, f64, String, HashMap<String, PriceProfile>)> {
+) -> Result<(f64, f64, f64, String, HashMap<String, PriceProfile>, usize)> {
     let client = OpenseaAPIClient::new(2);
     let mut conn = pool.acquire().await?;
     let collection = read_collection(&mut conn, collection_slug).await?;
@@ -30,6 +30,7 @@ pub async fn get_value_for_wallet(
     let mut ids = assets.into_iter().map(|a| a.token_id).collect::<Vec<_>>();
 
     ids.sort();
+    let total_tokens = ids.len();
 
     let ids_to_take = ids
         .into_iter()
@@ -81,6 +82,7 @@ pub async fn get_value_for_wallet(
         value_avg,
         collection.address.clone(),
         map,
+        total_tokens,
     ))
 }
 
