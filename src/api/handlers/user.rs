@@ -36,7 +36,7 @@ pub async fn get_profile(
 }
 
 #[cached(
-    size = 25,
+    size = 10,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
@@ -72,7 +72,7 @@ pub async fn get_price_profile(
 }
 
 #[cached(
-    size = 1_000_000,
+    size = 100,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}", collection_slug, token_id) }"#
@@ -188,7 +188,7 @@ pub async fn get_wallet_profile(
 }
 
 #[cached(
-    size = 25,
+    size = 10,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}{}{}", collection_slug, wallet, limit, offset) }"#
@@ -226,7 +226,7 @@ pub async fn get_wallet_profile_minimal(
 }
 
 #[cached(
-    size = 25,
+    size = 10,
     result = true,
     key = "String",
     convert = r#"{ format!("{}{}{}{}", collection_slug, wallet, limit, offset) }"#
