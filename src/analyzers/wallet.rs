@@ -29,7 +29,7 @@ pub async fn get_value_for_wallet(
 
     let mut ids = assets.into_iter().map(|a| a.token_id).collect::<Vec<_>>();
 
-    ids.sort();
+    ids.sort_unstable();
     let total_tokens = ids.len();
 
     let ids_to_take = ids
@@ -100,10 +100,12 @@ async fn _get_profile(
 ) -> Result<Option<(i32, PriceProfile)>> {
     // if there is a custom price short-circuit
     if let Some(price) = read_custom_price(collection_slug, token_id)? {
-        let mut p = PriceProfile::default();
-        p.max_price = price;
-        p.min_price = price;
-        p.avg_price = price;
+        let p = PriceProfile {
+            max_price: price,
+            min_price: price,
+            avg_price: price,
+            ..Default::default()
+        };
 
         return Ok(Some((token_id, p)));
     }

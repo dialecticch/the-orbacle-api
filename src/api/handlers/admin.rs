@@ -82,8 +82,7 @@ async fn _store_collection(
     let traits_all = all_assets
         .clone()
         .iter()
-        .map(|a| a.traits.clone())
-        .flatten()
+        .filter_map(|a| a.traits.clone())
         .flatten()
         .collect::<Vec<_>>();
     println!("{:?}", traits_all.len());
@@ -293,8 +292,7 @@ async fn _update_collection(
     let traits = all_assets
         .clone()
         .iter()
-        .map(|a| a.traits.clone())
-        .flatten()
+        .filter_map(|a| a.traits.clone())
         .flatten()
         .filter(|t| t.trait_count.is_some())
         .filter(|t| !ignored_trait_types_rarity.contains(&t.trait_type.to_lowercase()))

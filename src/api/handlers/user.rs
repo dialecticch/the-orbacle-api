@@ -84,10 +84,12 @@ async fn _get_price_profile(
 ) -> Result<PriceProfile> {
     // if there is a custom price short-circuit
     if let Some(price) = read_custom_price(&collection_slug, token_id)? {
-        let mut p = PriceProfile::default();
-        p.max_price = price;
-        p.min_price = price;
-        p.avg_price = price;
+        let p = PriceProfile {
+            max_price: price,
+            min_price: price,
+            avg_price: price,
+            ..Default::default()
+        };
 
         return Ok(p);
     }
