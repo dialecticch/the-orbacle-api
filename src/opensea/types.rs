@@ -85,6 +85,7 @@ pub enum SchemaName {
     ERC721,
     ERC1155,
     CRYPTOPUNKS,
+    UNKNOWN,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
