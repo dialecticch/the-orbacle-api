@@ -22,6 +22,12 @@ pub struct NewCollectionBody {
     pub ignored_trait_types_overlap: Vec<String>,
 }
 
+#[derive(serde::Deserialize, rweb::Schema)]
+pub struct NewCollectionBodMinimal {
+    pub collection_slug: String,
+    pub address: String,
+}
+
 #[post("/admin/collection/")]
 #[openapi(tags("Admin"))]
 #[openapi(summary = "Add a new collection")]
@@ -114,6 +120,7 @@ async fn _store_collection(
         multiplier,
         ignored_trait_types_rarity.clone(),
         ignored_trait_types_overlap.clone(),
+        None,
     )
     .await
     .unwrap_or_default();
@@ -197,47 +204,41 @@ Fetches and stores only the metadata of a collection
 pub async fn new_collection_minimal(
     #[data] pool: PgPool,
     #[header = "x-api-key"] key: String,
-    body: rweb::Json<NewCollectionBody>,
+    body: rweb::Json<NewCollectionBodMinimal>,
 ) -> Result<Json<()>, Rejection> {
-    let req: NewCollectionBody = body.into_inner();
+    let req: NewCollectionBodMinimal = body.into_inner();
     println!("/new_collection_minimal/{}", req.collection_slug);
     if key != dotenv::var("ADMIN_API_KEY").unwrap() {
         return Err(warp::reject::custom(ServiceError::Unauthorized));
     }
-    tokio::task::spawn(_store_collection_minimal(
-        pool,
-        req.collection_slug.clone(),
-        req.rarity_cutoff_multiplier,
-        req.ignored_trait_types_rarity
-            .into_iter()
-            .map(|t| t.to_lowercase())
-            .collect(),
-        req.ignored_trait_types_overlap,
-    ));
+
+    _store_collection_minimal(pool, req.collection_slug.clone(), req.address.clone())
+        .await
+        .unwrap();
     Ok(().into())
 }
 
 async fn _store_collection_minimal(
     pool: PgPool,
     collection_slug: String,
-    multiplier: f64,
-    ignored_trait_types_rarity: Vec<String>,
-    ignored_trait_types_overlap: Vec<String>,
+    address: String,
 ) -> Result<()> {
     let client = OpenseaAPIClient::new(1);
     let collection = client.get_collection(&collection_slug).await?;
+
     let mut conn = pool.acquire().await?;
 
     write_collection(
         &mut conn,
         &collection.collection,
         0f64,
-        multiplier,
-        ignored_trait_types_rarity.clone(),
-        ignored_trait_types_overlap.clone(),
+        0f64,
+        vec![],
+        vec![],
+        Some(address),
     )
     .await
-    .unwrap_or_default();
+    .unwrap();
 
     Ok(())
 }

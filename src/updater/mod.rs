@@ -202,7 +202,7 @@ pub async fn fetch_collection_floor(conn: &mut PgConnection, collection_slug: &s
     update_collection_floor(
         conn,
         collection_slug,
-        collection.collection.stats.floor_price,
+        collection.collection.stats.floor_price.unwrap_or_default(),
     )
     .await
     .unwrap_or_default();

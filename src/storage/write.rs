@@ -83,6 +83,7 @@ pub async fn write_collection(
     multiplier: f64,
     ignored_trait_types_rarity: Vec<String>,
     ignored_trait_types_overlap: Vec<String>,
+    address: Option<String>,
 ) -> Result<PgQueryResult> {
     sqlx::query!(
         r#"
@@ -109,14 +110,18 @@ pub async fn write_collection(
        "#,
         collection.slug.to_lowercase(),
         collection.name.clone().unwrap_or_default(),
-        collection.primary_asset_contracts[0].address.to_lowercase(),
+        if collection.primary_asset_contracts.len() != 0 {
+            collection.primary_asset_contracts[0].address.to_lowercase()
+        } else {
+            address.unwrap()
+        },
         &ignored_trait_types_rarity,
         &ignored_trait_types_overlap,
         collection.stats.total_supply as i32,
         (avg_trait_rarity * multiplier) / collection.stats.total_supply,
-        collection.stats.floor_price,
+        collection.stats.floor_price.unwrap_or_default(),
         avg_trait_rarity,
-        collection.banner_image_url,
+        collection.banner_image_url.clone().unwrap_or_default(),
         collection.stats.daily_volume,
         collection.stats.daily_sales,
         collection.stats.daily_avg_price,

@@ -17,14 +17,14 @@ pub struct Collection {
     pub traits: HashMap<String, HashMap<String, u64>>,
     pub slug: String,
     pub name: Option<String>,
-    pub banner_image_url: String,
+    pub banner_image_url: Option<String>,
     pub stats: CollectionStats,
 }
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct CollectionStats {
     pub total_supply: f64,
     pub total_sales: f64,
-    pub floor_price: f64,
+    pub floor_price: Option<f64>,
 
     #[serde(rename = "one_day_volume")]
     pub daily_volume: f64,

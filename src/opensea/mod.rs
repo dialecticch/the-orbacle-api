@@ -71,10 +71,7 @@ impl OpenseaAPIClient {
                 .query(&extra_query)
                 .header("Accept-Encoding", "application/json")
                 .header("x-api-key", dotenv::var("OPENSEA_API_KEY").unwrap());
-            println!(
-                "{:?}",
-                API_BASE.to_string() + path + &serde_json::to_string(query).unwrap()
-            );
+
             let response = re.send().await?.error_for_status()?;
             Ok(response)
         })
@@ -280,7 +277,10 @@ impl OpenseaAPIClient {
             .build()?;
         let resp = self.client.execute(reqw).await?;
         match resp.status() {
-            StatusCode::OK => serde_json::from_str(&resp.text().await?).map_err(|e| e.into()),
+            StatusCode::OK => {
+                let r = &resp.text().await?;
+                serde_json::from_str(r).map_err(|e| e.into())
+            }
             _ => match resp.text().await {
                 Ok(text) => Err(anyhow!(text)),
                 Err(e) => Err(anyhow!(e)),
