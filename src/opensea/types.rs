@@ -2,8 +2,6 @@ use chrono::NaiveDateTime;
 use chrono::Utc;
 use serde_aux::prelude::*;
 
-use std::collections::HashMap;
-
 #[derive(Default, serde::Serialize)]
 pub struct EmptyRequest {}
 
@@ -14,7 +12,6 @@ pub struct CollectionResponse {
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Collection {
     pub primary_asset_contracts: Vec<AssetContract>,
-    pub traits: HashMap<String, HashMap<String, u64>>,
     pub slug: String,
     pub name: Option<String>,
     pub banner_image_url: Option<String>,
