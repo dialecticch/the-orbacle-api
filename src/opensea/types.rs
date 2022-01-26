@@ -76,6 +76,8 @@ pub enum AssetContractType {
     NonFungible,
     #[serde(rename = "semi-fungible")]
     SemiFungible,
+    #[serde(rename = "unknown")]
+    Unknown,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
