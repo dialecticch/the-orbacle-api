@@ -1,7 +1,7 @@
 use crate::analyzers::{prices::get_most_valued_trait_floor, rarities::get_trait_rarities};
 use crate::custom::read_custom_price;
-use crate::opensea::{types::AssetsRequest, OpenseaAPIClient};
-use crate::profiles::token::price_profile::PriceProfile;
+use crate::opensea::{os_client::OpenseaAPIClient, types::AssetsRequest};
+use crate::profiles::price_profile::PriceProfile;
 use crate::storage::read::read_collection;
 use anyhow::Result;
 use cached::proc_macro::cached;

@@ -19,12 +19,3 @@ pub fn read_custom_price(collection_slug: &str, token_id: i32) -> Result<Option<
         Err(_) => Ok(None),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[tokio::test]
-    async fn test_read() {
-        assert_eq!(read_custom_price("0xmons-xyz", 249).unwrap(), Some(20.0))
-    }
-}

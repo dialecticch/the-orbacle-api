@@ -1,21 +1,14 @@
-use super::read::read_collection;
 use super::Asset;
 use crate::opensea::types::Asset as OpenseaAsset;
 use anyhow::Result;
 use itertools::Itertools;
-use sqlx::PgConnection;
 use std::collections::HashSet;
 
 pub async fn process_assets(
-    conn: &mut PgConnection,
     os_assets: Vec<OpenseaAsset>,
     collection_slug: &str,
     ignored_trait_types_overlap: Vec<String>,
 ) -> Result<Vec<Asset>> {
-    let collection = read_collection(conn, collection_slug).await?;
-
-    println!("{:?}", collection.total_supply);
-
     let mut assets: Vec<Asset> = vec![];
     for asset in os_assets {
         let trait_list = asset
@@ -69,7 +62,6 @@ pub async fn process_assets(
 
     let mut res = vec![];
     let cpus = num_cpus::get();
-    println!("cpus: {:?}", cpus);
     let chunks: Vec<_> = assets.chunks(cpus).collect();
     let mut handlers = vec![];
     for c in chunks {
@@ -186,7 +178,6 @@ mod tests {
     use super::*;
 
     use crate::opensea::types::*;
-    use crate::storage::establish_connection;
     #[tokio::test]
     async fn test_asset_process() {
         let asset1 = OpenseaAsset {
@@ -302,10 +293,7 @@ mod tests {
                 address: String::from("addr"),
             },
         };
-        let pool = establish_connection().await;
-        let mut conn = pool.acquire().await.unwrap();
         let a = process_assets(
-            &mut conn,
             vec![asset1, asset2, asset3],
             "forgottenruneswizardscult",
             vec!["background".to_string()],

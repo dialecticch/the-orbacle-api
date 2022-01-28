@@ -1,12 +1,12 @@
 use super::super::errors::{internal_error, ServiceError};
 use crate::analyzers::rarities::get_collection_avg_trait_rarity;
 use crate::opensea::types::AssetsRequest;
-use crate::opensea::{types::Trait, OpenseaAPIClient};
+use crate::opensea::{os_client::OpenseaAPIClient, types::Trait};
 use crate::storage::delete::*;
 use crate::storage::preprocess;
 use crate::storage::write::*;
 use crate::storage::Trait as StorageTrait;
-use crate::updater::*;
+use crate::sync::sync_events::sync_collection;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use rweb::*;
@@ -129,7 +129,6 @@ async fn _store_collection(
     println!("  Storing {} assets...", all_assets.len());
 
     let processed = preprocess::process_assets(
-        &mut conn,
         all_assets.clone(),
         &collection_slug,
         ignored_trait_types_overlap,
@@ -174,19 +173,11 @@ async fn _store_collection(
     println!("  Fetching events...");
 
     let now = Utc::now();
-
-    fetch_collection_listings(
+    sync_collection(
         &mut conn,
-        &collection_slug,
-        &(now - Duration::days(14)).naive_utc(),
-    )
-    .await
-    .unwrap();
-
-    fetch_collection_sales(
-        &mut conn,
-        &collection_slug,
-        collection.collection.primary_asset_contracts[0].created_date,
+        &collection.collection.clone().into(),
+        Some(&(now - Duration::days(14)).naive_utc()),
+        Some(&collection.collection.primary_asset_contracts[0].created_date),
     )
     .await
     .unwrap();

@@ -29,7 +29,7 @@ pub async fn read_all_collections(conn: &mut PgConnection) -> Result<Vec<Collect
         CollectionSmall,
         r#"
             select
-                slug, name 
+                slug, name, address
             from
                 collection
         "#,

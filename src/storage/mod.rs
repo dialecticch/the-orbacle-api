@@ -52,6 +52,17 @@ pub struct Collection {
 pub struct CollectionSmall {
     pub slug: String,
     pub name: String,
+    pub address: String,
+}
+use crate::opensea::types::Collection as OsCollection;
+impl std::convert::From<OsCollection> for CollectionSmall {
+    fn from(c: OsCollection) -> Self {
+        Self {
+            slug: c.slug,
+            name: c.name.unwrap_or_default(),
+            address: c.primary_asset_contracts[0].address.to_lowercase(),
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

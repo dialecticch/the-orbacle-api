@@ -1,7 +1,6 @@
-use governor::{Quota, RateLimiter};
 use local::api::server;
 use local::storage::establish_connection;
-use local::updater::update::update_db;
+use local::sync::sync_events::sync_events_loop;
 
 #[tokio::main]
 async fn main() {
@@ -10,9 +9,7 @@ async fn main() {
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     // run the updater in the background
-    let lim =
-        RateLimiter::direct(Quota::with_period(std::time::Duration::from_secs(600u64)).unwrap());
-    tokio::task::spawn(update_db(lim));
+    tokio::task::spawn(sync_events_loop());
 
     println!("Starting server...");
 
