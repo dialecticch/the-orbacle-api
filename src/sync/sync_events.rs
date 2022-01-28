@@ -139,7 +139,7 @@ pub async fn sync_collection(
     // Sync Transfers
     let transfers = fetch_collection_transfers(
         &client,
-        &collection.slug,
+        &collection.address,
         occurred_after_listings.unwrap_or(&NaiveDateTime::from_timestamp(latest_sale as i64, 0)),
     )
     .await
