@@ -52,7 +52,7 @@ pub async fn sync_collection(
     // Sync Cancelled Listing
     let cancelled = fetch_cancelled(
         &client,
-        &collection.slug,
+        &collection.address,
         occurred_after_listings.unwrap_or(&NaiveDateTime::from_timestamp(latest_event as i64, 0)),
     )
     .await
@@ -79,7 +79,7 @@ pub async fn sync_collection(
     // Sync Filled Listings
     let successful = fetch_successful(
         &client,
-        &collection.slug,
+        &collection.address,
         occurred_after_listings.unwrap_or(&NaiveDateTime::from_timestamp(latest_event as i64, 0)),
     )
     .await
@@ -107,7 +107,7 @@ pub async fn sync_collection(
     // Sync Created Listings
     let created = fetch_created(
         &client,
-        &collection.slug,
+        &collection.address,
         occurred_after_listings.unwrap_or(&NaiveDateTime::from_timestamp(latest_event as i64, 0)),
     )
     .await
