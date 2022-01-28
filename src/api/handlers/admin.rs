@@ -78,6 +78,7 @@ async fn _store_collection(
         .build();
 
     let all_assets = client.get_assets(req).await?;
+    println!("Assets {:?}", all_assets.len());
 
     let traits_all = all_assets
         .clone()
@@ -85,7 +86,7 @@ async fn _store_collection(
         .filter_map(|a| a.traits.clone())
         .flatten()
         .collect::<Vec<_>>();
-    println!("{:?}", traits_all.len());
+    println!(" Traits {:?}", traits_all.len());
 
     let traits_filtered: HashSet<Trait> = traits_all
         .into_iter()
@@ -105,6 +106,7 @@ async fn _store_collection(
             trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
+            token_ids: vec![],
         })
         .collect::<Vec<StorageTrait>>();
 
@@ -128,7 +130,14 @@ async fn _store_collection(
 
     println!("  Storing {} assets...", all_assets.len());
 
+    let map = preprocess::generate_token_mapping(all_assets.clone()).await?;
+
+    for (t, ids) in map.clone() {
+        add_token_id_list(&mut conn, &collection_slug, &t, ids).await?;
+    }
+
     let processed = preprocess::process_assets(
+        pool.clone(),
         all_assets.clone(),
         &collection_slug,
         ignored_trait_types_overlap,
@@ -181,6 +190,8 @@ async fn _store_collection(
     )
     .await
     .unwrap();
+
+    println!("  Done");
 
     Ok(())
 }
@@ -297,6 +308,7 @@ async fn _update_collection(
             trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
+            token_ids: vec![],
         })
         .collect::<Vec<StorageTrait>>();
 
@@ -313,7 +325,7 @@ async fn _update_collection(
     .await
     .unwrap_or_default();
 
-    update_traits(&mut conn, &collection_slug, traits)
+    reset_traits(&mut conn, &collection_slug, traits)
         .await
         .unwrap_or_default();
 

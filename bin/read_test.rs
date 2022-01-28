@@ -119,18 +119,32 @@ pub async fn main() -> Result<()> {
 
     // println!("highest_sale: {:?}", highest_sale);
 
-    let t = read_assets_with_traits(
+    // let t = read_assets_with_traits(
+    //     &mut conn,
+    //     COLLECTION,
+    //     vec![
+    //         String::from("background:blue"),
+    //         String::from("head:illuminatus"),
+    //     ],
+    // )
+    // .await
+    // .unwrap();
+
+    // println!("{:?}", t.len());
+
+    let t = read_traits_overlaping_tokens(
         &mut conn,
         COLLECTION,
-        vec![
+        &vec![
+            String::from("familiar:lucky black cat"),
             String::from("background:blue"),
-            String::from("head:illuminatus"),
+            String::from("head:floral master"),
         ],
     )
     .await
     .unwrap();
 
-    println!("{:?}", t.len());
+    println!("{:?}", t);
 
     Ok(())
 }

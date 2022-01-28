@@ -194,16 +194,18 @@ pub async fn write_traits(conn: &mut PgConnection, traits: Vec<super::Trait>) ->
                trait_id,
                trait_type,
                trait_name,
-               trait_count
+               trait_count,
+               token_ids
         )
         values
-            ($1, $2, $3, $4, $5)
+            ($1, $2, $3, $4, $5, $6)
         "#,
             t.collection_slug,
             t.trait_id,
             t.trait_type,
             t.trait_name,
-            t.trait_count
+            t.trait_count,
+            &t.token_ids,
         )
         .execute(&mut txn)
         .await?;
@@ -211,7 +213,30 @@ pub async fn write_traits(conn: &mut PgConnection, traits: Vec<super::Trait>) ->
     txn.commit().await.map_err(|e| e.into())
 }
 
-pub async fn update_traits(
+pub async fn add_token_id_list(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    trait_id: &str,
+    token_ids: Vec<i32>,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+            update trait
+            set
+                token_ids = $1
+            where collection_slug= $2 and trait_id = $3
+        "#,
+        &token_ids,
+        collection_slug,
+        trait_id,
+    )
+    .execute(conn)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn reset_traits(
     conn: &mut PgConnection,
     collection_slug: &str,
     traits: Vec<super::Trait>,

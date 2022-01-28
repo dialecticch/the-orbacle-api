@@ -93,6 +93,36 @@ pub async fn read_traits_for_asset(
     Ok(res)
 }
 
+pub async fn read_traits_overlaping_tokens(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    traits: &[String],
+) -> Result<Vec<i32>> {
+    let v: Vec<Option<i32>> = sqlx::query_scalar!(
+        r#"
+        with elements (element) as ( 
+            select 
+                unnest(token_ids)
+            from trait
+                where collection_slug = $2 and trait_id = any($1)
+        )
+        select distinct(element)
+        from ( 
+                select *, count($3::int) over (partition by element) as occurs
+                from elements 
+            ) as e
+        where occurs > $3::int
+        "#,
+        traits,
+        collection_slug,
+        (traits.len() - 1) as i32
+    )
+    .fetch_all(conn)
+    .await?;
+
+    Ok(v.into_iter().flatten().collect::<Vec<_>>())
+}
+
 // ============ Asset ============
 pub async fn read_asset(
     conn: &mut PgConnection,

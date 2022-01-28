@@ -1,10 +1,60 @@
 use super::Asset;
 use crate::opensea::types::Asset as OpenseaAsset;
+use crate::storage::read::read_traits_overlaping_tokens;
 use anyhow::Result;
+use chrono::Utc;
+use futures::StreamExt;
 use itertools::Itertools;
-use std::collections::HashSet;
+use sqlx::PgPool;
+use std::collections::{HashMap, HashSet};
+
+pub async fn generate_token_mapping(
+    os_assets: Vec<OpenseaAsset>,
+) -> Result<HashMap<String, Vec<i32>>> {
+    println!("start");
+    let mut map = HashMap::<String, Vec<i32>>::default();
+
+    for asset in os_assets {
+        let trait_list = asset
+            .traits
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|t| t.trait_type.to_lowercase() != "serial")
+            .collect::<Vec<_>>();
+
+        let trait_ids = trait_list
+            .iter()
+            .map(|t| {
+                format!(
+                    "{}:{}",
+                    &t.trait_type.to_lowercase(),
+                    &t.value.to_lowercase()
+                )
+            })
+            .collect::<Vec<String>>();
+
+        for t in trait_ids {
+            match map.get(&t) {
+                Some(l) => {
+                    let mut nl = l.clone();
+                    nl.push(asset.token_id);
+                    map.insert(t.clone(), nl);
+                }
+                None => {
+                    map.insert(t.clone(), vec![]);
+                }
+            }
+        }
+    }
+
+    println!("Unique Traits {:?}", map.keys().len());
+
+    Ok(map)
+}
 
 pub async fn process_assets(
+    pool: PgPool,
     os_assets: Vec<OpenseaAsset>,
     collection_slug: &str,
     ignored_trait_types_overlap: Vec<String>,
@@ -60,46 +110,57 @@ pub async fn process_assets(
     }
     println!("base processing done");
 
+    let b = Utc::now();
+
     let mut res = vec![];
-    let cpus = num_cpus::get();
-    let chunks: Vec<_> = assets.chunks(cpus).collect();
-    let mut handlers = vec![];
-    for c in chunks {
-        let collection = assets.clone();
-        let ignored = ignored_trait_types_overlap.clone();
-        let list = c.to_vec();
-        handlers.push(std::thread::spawn(move || {
-            compute_combinations(list.clone(), collection, &ignored).unwrap()
-        }))
+    let chunks: Vec<&[Asset]> = assets.chunks(assets.len() / 16).collect();
+    //let mut handlers = vec![];
+    // for c in chunks {
+    //     let ignored = ignored_trait_types_overlap.clone();
+    //     let list = c.to_vec();
+    //     let map = map.clone();
+    //     handlers.push(std::thread::spawn(move || {
+    //         compute_combinations(pool.clone(), list.clone(), &ignored, map).unwrap()
+    //     }))
+    // }
+
+    let mut stream = futures::stream::iter(0..chunks.len())
+        .map(|i| {
+            compute_combinations(
+                pool.clone(),
+                collection_slug,
+                chunks[i].clone().to_vec(),
+                &ignored_trait_types_overlap,
+            )
+        })
+        .buffer_unordered(16);
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(mut resp) => {
+                res.append(&mut resp);
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+            }
+        }
     }
 
-    for h in handlers {
-        res.extend(h.join().unwrap())
-    }
+    let a = Utc::now();
+    println!("elapsed {:?}s", (a - b).num_seconds());
 
     Ok(res)
 }
 
-fn compute_combinations(
+async fn compute_combinations(
+    pool: PgPool,
+    collection_slug: &str,
     assets: Vec<Asset>,
-    collection: Vec<Asset>,
     ignored_trait_types_overlap: &[String],
 ) -> Result<Vec<Asset>> {
     let mut res = vec![];
 
-    let collection_filtered = collection
-        .into_iter()
-        .map(|a| {
-            (
-                a.token_id,
-                a.traits
-                    .iter()
-                    .filter(|a| !ignored_trait_types_overlap.contains(a))
-                    .cloned()
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .collect::<Vec<_>>();
+    let mut conn = pool.acquire().await?;
 
     for mut asset in assets {
         let mut unique_3 = HashSet::<i32>::new();
@@ -115,49 +176,24 @@ fn compute_combinations(
             .collect();
 
         for vpair in asset_traits.iter().combinations(3) {
-            unique_3.extend(
-                collection_filtered
-                    .iter()
-                    .filter(|a| a.0 != asset.token_id)
-                    .filter(|a| {
-                        a.1.contains(vpair[0]) && a.1.contains(vpair[1]) && a.1.contains(vpair[2])
-                    })
-                    .map(|a| a.0)
-                    .collect::<Vec<_>>(),
-            );
+            let traits = vpair.into_iter().map(|t| t.to_string()).collect::<Vec<_>>();
+
+            let ids = read_traits_overlaping_tokens(&mut conn, collection_slug, &traits).await?;
+            unique_3.extend(ids);
         }
 
         for vpair in asset_traits.iter().combinations(4) {
-            unique_4.extend(
-                collection_filtered
-                    .iter()
-                    .filter(|a| a.0 != asset.token_id)
-                    .filter(|a| {
-                        a.1.contains(vpair[0])
-                            && a.1.contains(vpair[1])
-                            && a.1.contains(vpair[2])
-                            && a.1.contains(vpair[3])
-                    })
-                    .map(|a| a.0)
-                    .collect::<Vec<_>>(),
-            );
+            let traits = vpair.into_iter().map(|t| t.to_string()).collect::<Vec<_>>();
+
+            let ids = read_traits_overlaping_tokens(&mut conn, collection_slug, &traits).await?;
+            unique_4.extend(ids);
         }
 
         for vpair in asset_traits.iter().combinations(5) {
-            unique_5.extend(
-                collection_filtered
-                    .iter()
-                    .filter(|a| a.0 != asset.token_id)
-                    .filter(|a| {
-                        a.1.contains(vpair[0])
-                            && a.1.contains(vpair[1])
-                            && a.1.contains(vpair[2])
-                            && a.1.contains(vpair[3])
-                            && a.1.contains(vpair[4])
-                    })
-                    .map(|a| a.0)
-                    .collect::<Vec<_>>(),
-            );
+            let traits = vpair.into_iter().map(|t| t.to_string()).collect::<Vec<_>>();
+
+            let ids = read_traits_overlaping_tokens(&mut conn, collection_slug, &traits).await?;
+            unique_5.extend(ids);
         }
 
         asset.traits_3_combination_overlap = unique_3.len() as i32;
@@ -170,6 +206,8 @@ fn compute_combinations(
         res.push(asset.clone());
     }
 
+    println!("post processing done");
+
     Ok(res)
 }
 
@@ -178,8 +216,7 @@ mod tests {
     use super::*;
 
     use crate::opensea::types::*;
-    #[tokio::test]
-    async fn test_asset_process() {
+    fn get_assets() -> Vec<OpenseaAsset> {
         let asset1 = OpenseaAsset {
             name: Some(String::from("Test")),
             asset_contract: AssetContract::default(),
@@ -293,13 +330,24 @@ mod tests {
                 address: String::from("addr"),
             },
         };
-        let a = process_assets(
-            vec![asset1, asset2, asset3],
-            "forgottenruneswizardscult",
-            vec!["background".to_string()],
-        )
-        .await
-        .unwrap();
+        vec![asset1, asset2, asset3]
+    }
+    #[tokio::test]
+    async fn test_asset_process() {
+        // let a = process_assets(
+        //     get_assets(),
+        //     "forgottenruneswizardscult",
+        //     vec!["background".to_string()],
+        // )
+        // .await
+        // .unwrap();
+        // println!("{}", serde_json::to_string_pretty(&a).unwrap());
+        // assert!(!a.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_generate_token_mapping() {
+        let a = generate_token_mapping(get_assets()).await.unwrap();
         println!("{}", serde_json::to_string_pretty(&a).unwrap());
         assert!(!a.is_empty());
     }
