@@ -114,15 +114,6 @@ pub async fn process_assets(
 
     let mut res = vec![];
     let chunks: Vec<&[Asset]> = assets.chunks(assets.len() / 16).collect();
-    //let mut handlers = vec![];
-    // for c in chunks {
-    //     let ignored = ignored_trait_types_overlap.clone();
-    //     let list = c.to_vec();
-    //     let map = map.clone();
-    //     handlers.push(std::thread::spawn(move || {
-    //         compute_combinations(pool.clone(), list.clone(), &ignored, map).unwrap()
-    //     }))
-    // }
 
     let mut stream = futures::stream::iter(0..chunks.len())
         .map(|i| {
