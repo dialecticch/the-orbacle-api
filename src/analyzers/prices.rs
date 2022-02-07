@@ -102,8 +102,13 @@ pub async fn get_flattening_staircase_price(
     }
     let mut price = floors[0];
 
-    for (i, f) in floors.iter().enumerate().skip(1) {
-        price += (f - collection_floor) / (2f64 + (f - floors[i - 1]))
+    for (i, f) in floors
+        .iter()
+        .filter(|f| **f > collection_floor * 1.5)
+        .enumerate()
+        .skip(1)
+    {
+        price += (f - collection_floor) / (1f64 + (floors[i - 1] - f));
     }
 
     Ok(Some(price))
