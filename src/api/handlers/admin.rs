@@ -1,12 +1,12 @@
 use super::super::errors::{internal_error, ServiceError};
 use crate::analyzers::rarities::get_collection_avg_trait_rarity;
 use crate::opensea::types::AssetsRequest;
-use crate::opensea::{types::Trait, OpenseaAPIClient};
+use crate::opensea::{os_client::OpenseaAPIClient, types::Trait};
 use crate::storage::delete::*;
 use crate::storage::preprocess;
 use crate::storage::write::*;
 use crate::storage::Trait as StorageTrait;
-use crate::updater::*;
+use crate::sync::sync_events::sync_collection;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use rweb::*;
@@ -78,6 +78,7 @@ async fn _store_collection(
         .build();
 
     let all_assets = client.get_assets(req).await?;
+    println!("Assets {:?}", all_assets.len());
 
     let traits_all = all_assets
         .clone()
@@ -85,7 +86,7 @@ async fn _store_collection(
         .filter_map(|a| a.traits.clone())
         .flatten()
         .collect::<Vec<_>>();
-    println!("{:?}", traits_all.len());
+    println!(" Traits {:?}", traits_all.len());
 
     let traits_filtered: HashSet<Trait> = traits_all
         .into_iter()
@@ -105,6 +106,7 @@ async fn _store_collection(
             trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
+            token_ids: vec![],
         })
         .collect::<Vec<StorageTrait>>();
 
@@ -128,8 +130,14 @@ async fn _store_collection(
 
     println!("  Storing {} assets...", all_assets.len());
 
+    let map = preprocess::generate_token_mapping(all_assets.clone()).await?;
+
+    for (t, ids) in map.clone() {
+        add_token_id_list(&mut conn, &collection_slug, &t, ids).await?;
+    }
+
     let processed = preprocess::process_assets(
-        &mut conn,
+        pool.clone(),
         all_assets.clone(),
         &collection_slug,
         ignored_trait_types_overlap,
@@ -174,22 +182,16 @@ async fn _store_collection(
     println!("  Fetching events...");
 
     let now = Utc::now();
-
-    fetch_collection_listings(
+    sync_collection(
         &mut conn,
-        &collection_slug,
-        &(now - Duration::days(14)).naive_utc(),
+        &collection.collection.clone().into(),
+        Some(&(now - Duration::days(14)).naive_utc()),
+        Some(&collection.collection.primary_asset_contracts[0].created_date),
     )
     .await
     .unwrap();
 
-    fetch_collection_sales(
-        &mut conn,
-        &collection_slug,
-        collection.collection.primary_asset_contracts[0].created_date,
-    )
-    .await
-    .unwrap();
+    println!("  Done");
 
     Ok(())
 }
@@ -306,6 +308,7 @@ async fn _update_collection(
             trait_type: t.trait_type.to_lowercase(),
             trait_name: t.value.to_lowercase(),
             trait_count: t.trait_count.unwrap() as i32,
+            token_ids: vec![],
         })
         .collect::<Vec<StorageTrait>>();
 
@@ -322,7 +325,7 @@ async fn _update_collection(
     .await
     .unwrap_or_default();
 
-    update_traits(&mut conn, &collection_slug, traits)
+    reset_traits(&mut conn, &collection_slug, traits)
         .await
         .unwrap_or_default();
 

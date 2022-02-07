@@ -10,6 +10,7 @@ pub struct Trait {
     pub trait_type: String,
     pub trait_name: String,
     pub trait_count: i32,
+    pub token_ids: Vec<i32>,
 }
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct Asset {
@@ -52,6 +53,17 @@ pub struct Collection {
 pub struct CollectionSmall {
     pub slug: String,
     pub name: String,
+    pub address: String,
+}
+use crate::opensea::types::Collection as OsCollection;
+impl std::convert::From<OsCollection> for CollectionSmall {
+    fn from(c: OsCollection) -> Self {
+        Self {
+            slug: c.slug,
+            name: c.name.unwrap_or_default(),
+            address: c.primary_asset_contracts[0].address.to_lowercase(),
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -72,6 +84,7 @@ pub struct Listing {
 }
 
 use dotenv::dotenv;
+use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 use std::env;
 
@@ -79,7 +92,10 @@ pub async fn establish_connection() -> PgPool {
     dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgPool::connect(&database_url)
+    let pool = PoolOptions::new();
+    pool.max_connections(30)
+        .connect_timeout(std::time::Duration::from_secs(60))
+        .connect(&database_url)
         .await
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }

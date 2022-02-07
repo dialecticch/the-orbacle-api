@@ -2,10 +2,10 @@ use super::super::errors::internal_error;
 use crate::analyzers::prices::get_most_valued_trait_floor;
 use crate::analyzers::rarities::get_trait_rarities;
 use crate::custom::read_custom_price;
-use crate::profiles::token::collection_profile::CollectionProfile;
-use crate::profiles::token::price_profile::PriceProfile;
-use crate::profiles::token::token_profile::TokenProfile;
-use crate::profiles::token::wallet_profile::WalletProfile;
+use crate::profiles::collection_profile::CollectionProfile;
+use crate::profiles::price_profile::PriceProfile;
+use crate::profiles::token_profile::TokenProfile;
+use crate::profiles::wallet_profile::WalletProfile;
 use crate::storage::{
     read::{read_all_collections, read_collection},
     CollectionSmall,
