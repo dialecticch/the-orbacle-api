@@ -84,6 +84,65 @@ pub async fn get_most_valued_trait_floor(
     }
 }
 
+pub async fn get_flattening_staircase_price(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    collection_floor: f64,
+    token_traits: Vec<TraitRarities>,
+    cutoff: f64,
+) -> Result<Option<f64>> {
+    let floors = get_all_traits_floor(conn, collection_slug, token_traits, cutoff)
+        .await?
+        .iter()
+        .map(|f| f.floor_price)
+        .collect::<Vec<_>>();
+
+    if floors.is_empty() {
+        return Ok(None);
+    }
+    let mut price = floors[0];
+
+    for (i, f) in floors.iter().enumerate().skip(1) {
+        price += (f - collection_floor) / (2f64 + (f - floors[i - 1]))
+    }
+
+    Ok(Some(price))
+}
+
+pub async fn get_all_traits_floor(
+    conn: &mut PgConnection,
+    collection_slug: &str,
+    token_traits: Vec<TraitRarities>,
+    cutoff: f64,
+) -> Result<Vec<TraitFloor>> {
+    let mut token_traits_filtered = token_traits
+        .iter()
+        .filter(|t| t.rarity < cutoff)
+        .cloned()
+        .collect::<Vec<_>>();
+
+    // if all traits are above the average rarity
+    if token_traits_filtered.is_empty() {
+        token_traits_filtered = token_traits.clone();
+    }
+
+    let mut floors = vec![];
+    for t in token_traits_filtered {
+        let trait_listings = get_trait_listings(conn, collection_slug, &t.trait_id).await?;
+        if !trait_listings.is_empty() {
+            floors.push(TraitFloor {
+                trait_id: t.trait_id.clone(),
+                token_id: trait_listings[0].token_id,
+                floor_price: trait_listings[0].price,
+            })
+        }
+    }
+
+    floors.sort_by(|a, b| b.floor_price.partial_cmp(&a.floor_price).unwrap());
+
+    Ok(floors)
+}
+
 pub async fn get_rarest_trait_floor(
     conn: &mut PgConnection,
     collection_slug: &str,
