@@ -88,6 +88,7 @@ impl PriceProfile {
             most_rare_trait_floor.unwrap_or(0f64),
             most_valued_trait_floor.unwrap_or(0f64),
             rarity_weighted_floor.unwrap_or(0f64),
+            floor_staircase_price.unwrap_or(0f64),
             avg_last_three_mvt_sales.unwrap_or(0f64),
             last_sale_relative_collection_avg.unwrap_or(0f64),
             last_sale_relative_mvt_avg.unwrap_or(0f64),
