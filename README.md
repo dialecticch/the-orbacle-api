@@ -28,3 +28,62 @@ Full REST documentation is available at: https://api.prod.theorbacle.com/docs
 
 Contributions are much appreciated!
 Anything from performance improvements, complexity reduction, new strategies or new profiles, if you want to build it please do!
+
+## Development and Build
+
+To run the Orbacle for yourself first create a `.env` file with the following parameters:
+
+```env
+DATABASE_URL =
+OPENSEA_API_KEY =
+ENDPOINT =
+PORT =
+ADMIN_API_KEY =
+CUSTOM_PRICES_JSON_PATH =
+```
+
+All values except for `CUSTOM_PRICES_JSON_PATH` are required, if the custom price file is not set, no custom prices will be applied, if it is set, custom prices will be read from a JSON file which needs to have the following format:
+
+```json
+{
+  "collection-slug": {
+    "token-id-1": price,
+    "token-id-2": price
+  },
+  "forgottenruneswizardscult": {
+    "777": 1000.0
+  }
+}
+```
+
+Once this is set apply the migrations to the database:
+
+```shell
+cargo sqlx migrate run
+```
+
+Then you can start the server by running:
+
+```shell
+cargo run --release --bin the-orbacle
+```
+
+## Calling the Admin API endpoints
+
+To add collections to the Orbacle you can call the `/admin/collection` POST endpoint with the API key set in the `ADMIN_API_KEY` env set in `x-api-key` header:
+
+```curl
+curl --location --request POST '<endpoint>:<port>/admin/collection' \
+--header 'x-api-key: <admin-api-key>' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "collection_slug":"forgottenruneswizardscult",
+    "total_supply_expected": 10000,
+    "rarity_cutoff_multiplier": 2,
+    "ignored_trait_types_rarity": [
+    ],
+    "ignored_trait_types_overlap": [
+        "background"
+    ]
+}'
+```
