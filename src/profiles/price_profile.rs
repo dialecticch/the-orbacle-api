@@ -11,6 +11,7 @@ pub struct PriceProfile {
     pub last_sale: Option<f64>,
     pub most_rare_trait_floor: Option<f64>,
     pub most_valued_trait_floor: Option<f64>,
+    pub floor_staircase_price: Option<f64>,
     pub rarity_weighted_floor: Option<f64>,
     pub avg_last_three_mvt_sales: Option<f64>,
     pub last_sale_relative_collection_avg: Option<f64>,
@@ -65,7 +66,17 @@ impl PriceProfile {
 
         log::info!("Getting rarity_weighted_floor");
         let rarity_weighted_floor =
-            get_rarity_weighted_floor(conn, collection_slug, token_traits, cutoff).await?;
+            get_rarity_weighted_floor(conn, collection_slug, token_traits.clone(), cutoff).await?;
+
+        log::info!("Getting flattening_staircase_price");
+        let floor_staircase_price = get_flattening_staircase_price(
+            conn,
+            collection_slug,
+            collection_floor,
+            token_traits,
+            cutoff,
+        )
+        .await?;
 
         log::info!("Getting last_sale_relative_collection_avg");
         let last_sale_relative_collection_avg =
@@ -77,6 +88,7 @@ impl PriceProfile {
             most_rare_trait_floor.unwrap_or(0f64),
             most_valued_trait_floor.unwrap_or(0f64),
             rarity_weighted_floor.unwrap_or(0f64),
+            floor_staircase_price.unwrap_or(0f64),
             avg_last_three_mvt_sales.unwrap_or(0f64),
             last_sale_relative_collection_avg.unwrap_or(0f64),
             last_sale_relative_mvt_avg.unwrap_or(0f64),
@@ -98,6 +110,7 @@ impl PriceProfile {
             last_sale: last_sale.map(|l| l.price),
             most_rare_trait_floor,
             most_valued_trait_floor,
+            floor_staircase_price,
             rarity_weighted_floor,
             avg_last_three_mvt_sales,
             last_sale_relative_collection_avg,
